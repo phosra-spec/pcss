@@ -1,0 +1,16 @@
+{
+  "slug": "eu_dsa_minor_targeted_ad_ban",
+  "capability": "lens",
+  "category": "advertising",
+  "statutes": [
+    {
+      "jurisdiction": "EU",
+      "citation": "EU-DSA-Art.28(2)",
+      "url": "https://eur-lex.europa.eu/eli/reg/2022/2065/oj"
+    }
+  ],
+  "summary": "Targeted advertising based on profiling banned for users known to be minors. Applies regardless of age signal confidence.",
+  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "default_outcome": "deny",
+  "introduced_in": "v1.0"
+}

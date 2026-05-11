@@ -1,0 +1,16 @@
+{
+  "slug": "eu_gdpr_age_of_consent_16",
+  "capability": "threshold",
+  "category": "consent",
+  "statutes": [
+    {
+      "jurisdiction": "EU",
+      "citation": "EU-GDPR-Art.8",
+      "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
+    }
+  ],
+  "summary": "Parental consent required for data processing of users under 16 (member states may lower the age of consent to 13). Threshold envelope required.",
+  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15"],
+  "default_outcome": "deny",
+  "introduced_in": "v1.0"
+}

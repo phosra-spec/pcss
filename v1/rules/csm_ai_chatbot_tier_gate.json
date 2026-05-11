@@ -1,0 +1,16 @@
+{
+  "slug": "csm_ai_chatbot_tier_gate",
+  "capability": "lens",
+  "category": "ai",
+  "statutes": [
+    {
+      "jurisdiction": "US",
+      "citation": "Common-Sense-Media-AI-Ratings-2026",
+      "url": "https://www.commonsensemedia.org/ai-ratings"
+    }
+  ],
+  "summary": "AI chatbots gated by Common Sense Media 4-tier risk scale: Low (allow all), Moderate (allow 13+), High (allow 16+), Unacceptable (deny all minors).",
+  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "default_outcome": "deny",
+  "introduced_in": "v1.0"
+}

@@ -1,0 +1,21 @@
+{
+  "slug": "kosa_recommender_off_minor",
+  "capability": "lens",
+  "category": "algorithmic",
+  "statutes": [
+    {
+      "jurisdiction": "US",
+      "citation": "KOSA-§4(b)(2)",
+      "url": "https://www.congress.gov/bill/118th-congress/senate-bill/1409/text"
+    },
+    {
+      "jurisdiction": "US-CA",
+      "citation": "CA-AADC-§22675(a)(3)",
+      "url": "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202120220AB2273"
+    }
+  ],
+  "summary": "Personalized algorithmic recommender feeds off by default for users <18. Chronological or non-personalized feed served unless minor or verified parent opts in.",
+  "applies_to_ages": ["6-9", "10-12", "13-15", "16-17"],
+  "default_outcome": "deny",
+  "introduced_in": "v1.0"
+}

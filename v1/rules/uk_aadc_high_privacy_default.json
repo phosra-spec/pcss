@@ -1,0 +1,16 @@
+{
+  "slug": "uk_aadc_high_privacy_default",
+  "capability": "threshold",
+  "category": "privacy",
+  "statutes": [
+    {
+      "jurisdiction": "UK",
+      "citation": "UK-AADC-Std.4",
+      "url": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/"
+    }
+  ],
+  "summary": "Highest privacy defaults applied to any user the service believes may be a child. Profiling off, geolocation off, no detrimental nudging.",
+  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "default_outcome": "deny",
+  "introduced_in": "v1.0"
+}

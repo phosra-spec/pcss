@@ -1,0 +1,16 @@
+{
+  "slug": "csm_nfk_hard_block",
+  "capability": "aegis",
+  "category": "rating",
+  "statutes": [
+    {
+      "jurisdiction": "US",
+      "citation": "Common-Sense-Media-Privacy-Program-2026",
+      "url": "https://www.commonsensemedia.org/privacy-program"
+    }
+  ],
+  "summary": "Products carrying a Common Sense Media Not For Kids (NFK) flag are hard-blocked for users with age_band below adult. Bypasses Lens conflict resolution.",
+  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "default_outcome": "deny",
+  "introduced_in": "v1.0"
+}
