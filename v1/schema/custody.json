@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcss.phosra-spec.org/v1/schema/custody.json",
+  "title": "PCSS Custody Envelope",
+  "description": "Data-minimization and deletion-rights envelope. Carries retention declarations, deletion requests, and deletion-completion receipts. See PCSS §8.",
+  "type": "object",
+  "required": ["custody_id", "action", "subject_ref", "issued_at", "issuer", "signature"],
+  "properties": {
+    "custody_id": {
+      "type": "string",
+      "description": "Stable, opaque identifier for this custody envelope.",
+      "pattern": "^cstd_[A-Za-z0-9_-]{16,128}$"
+    },
+    "action": {
+      "type": "string",
+      "description": "The custody action this envelope represents.",
+      "enum": ["retention-declaration", "deletion-request", "deletion-completion", "export-request", "export-completion"]
+    },
+    "subject_ref": {
+      "type": "object",
+      "description": "Opaque reference to the subject of this custody envelope. MUST be either a bearing_id (per-child) or a consent_id (per-consent-grant). MUST NOT carry user-identifying data.",
+      "properties": {
+        "bearing_id": {
+          "type": "string",
+          "pattern": "^brng_[A-Za-z0-9_-]{16,128}$"
+        },
+        "consent_id": {
+          "type": "string",
+          "pattern": "^thsh_[A-Za-z0-9_-]{16,128}$"
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "array",
+      "description": "Data scopes affected. 'all' MUST be supported for full deletion. Per-scope deletion uses the same vocabulary as Threshold granted_scope.",
+      "items": {
+        "type": "string",
+        "pattern": "^([a-z][a-z0-9-]*:[a-z0-9_-]+|all)$"
+      },
+      "minItems": 1
+    },
+    "retention_until": {
+      "type": "string",
+      "format": "date-time",
+      "description": "For retention-declaration: the timestamp beyond which the implementer commits not to retain the data. Default per §8.1: issued_at + 180 days. Statutory overrides (e.g., CSAM evidence preservation) MUST be cited in 'statutory_basis'."
+    },
+    "statutory_basis": {
+      "type": "array",
+      "description": "Statute citations that override the default retention. e.g., '18 U.S.C. §2258A' for CSAM preservation.",
+      "items": { "type": "string" }
+    },
+    "propagation_deadline": {
+      "type": "string",
+      "format": "date-time",
+      "description": "For deletion-request: the timestamp by which the deletion MUST be propagated to downstream consumers (§8.2 default: 30 days from issued_at)."
+    },
+    "completion_receipt": {
+      "type": "object",
+      "description": "For deletion-completion: confirmation that the deletion was executed.",
+      "properties": {
+        "deleted_at": { "type": "string", "format": "date-time" },
+        "downstream_consumers": {
+          "type": "array",
+          "description": "Registered identifiers of downstream consumers to which the deletion was propagated.",
+          "items": { "type": "string", "pattern": "^[a-z]+:[a-z0-9-]+$" }
+        },
+        "tombstone_id": {
+          "type": "string",
+          "description": "Opaque tombstone identifier retained for audit purposes after the data itself is deleted.",
+          "pattern": "^tomb_[A-Za-z0-9_-]{16,128}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "issuer": {
+      "type": "string",
+      "description": "Registered identifier of the entity emitting the envelope.",
+      "pattern": "^[a-z]+:[a-z0-9-]+$"
+    },
+    "jurisdiction": {
+      "type": "string",
+      "description": "ISO 3166 country code with optional sub-region.",
+      "pattern": "^[A-Z]{2}(-[A-Z]{2,3})?$"
+    },
+    "signature": {
+      "type": "object",
+      "required": ["alg", "value", "key_id"],
+      "properties": {
+        "alg": { "type": "string", "enum": ["ed25519"] },
+        "value": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+        "key_id": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

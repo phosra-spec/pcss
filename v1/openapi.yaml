@@ -121,13 +121,21 @@ paths:
                   pattern: "^[A-Z]{2}(-[A-Z]{2,3})?$"
       responses:
         "200":
-          description: Verdict envelope.
+          description: |
+            Verdict envelope. Per spec §4.2, default-deny verdicts (missing
+            bearing, unresolved issuer, expired signature, ambiguous conflict,
+            service degradation) are returned at 200 with `allow: false` and
+            `reason: "lens:default_deny"`. The HTTP layer reserves 4xx for
+            request shape issues only — never for policy outcomes.
           content:
             application/json:
               schema:
                 $ref: "schema/verdict.json"
         "422":
-          description: Bearing envelope invalid (expired signature, unresolved issuer, schema violation). Implementer MUST default-deny per §4.2.
+          description: |
+            Request body does not validate against the JSON Schema. No
+            Verdict is produced; the implementer MUST NOT allow the action
+            and SHOULD log this as an integration defect.
 
   /threshold/check:
     post:

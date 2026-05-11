@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcss.phosra-spec.org/v1/schema/threshold.json",
+  "title": "PCSS Threshold Envelope",
+  "description": "Verifiable parental consent and access-boundary grants. Issued by the parent (typically via a parental-control app or OS Family flow) and consumed by Lens, Aegis, and downstream platforms. See PCSS §5.",
+  "type": "object",
+  "required": ["consent_id", "bearing_id", "granted_scope", "issued_at", "issuer", "jurisdiction", "signature"],
+  "properties": {
+    "consent_id": {
+      "type": "string",
+      "description": "Stable, opaque identifier for this consent envelope.",
+      "pattern": "^thsh_[A-Za-z0-9_-]{16,128}$"
+    },
+    "bearing_id": {
+      "type": "string",
+      "description": "Reference to the Bearing envelope this consent is bound to. Consent is per-child, never global.",
+      "pattern": "^brng_[A-Za-z0-9_-]{16,128}$"
+    },
+    "granted_scope": {
+      "type": "array",
+      "description": "Scopes the parent has authorized. Canonical scopes use the form 'surface:value' (e.g., 'dm:friends-only', 'purchases:requires-approval', 'feed:no-recommender'). Vendor extensions MUST use a vendor prefix (e.g., 'apple:icloud-photos:family-only').",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+      },
+      "minItems": 0
+    },
+    "vpc": {
+      "type": "boolean",
+      "description": "True if this consent satisfies COPPA §312.5 verifiable parental consent (VPC) requirements. SHOULD be true for consents issued to users with age_band 0-5, 6-9, or 10-12 in US jurisdictions.",
+      "default": false
+    },
+    "vpc_method": {
+      "type": "string",
+      "description": "When vpc=true, identifies the verification method used.",
+      "enum": [
+        "credit-card-plus-one",
+        "knowledge-based-authentication",
+        "signed-form",
+        "government-id-match",
+        "video-conference",
+        "facial-age-estimation",
+        "third-party-verifier"
+      ]
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the parent granted consent."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional ISO 8601 timestamp after which the consent MUST be re-issued or treated as revoked. Default: 365 days for VPC; 90 days otherwise."
+    },
+    "revoked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "If present, the timestamp at which the parent revoked this consent. Revocation MUST propagate to all downstream consumers within the §5.3 freshness window (7 days for VPC; 30 days otherwise)."
+    },
+    "issuer": {
+      "type": "string",
+      "description": "Registered identifier of the entity that emitted the consent envelope on the parent's behalf (e.g., 'app:bark', 'os:apple-family', 'controls:nextdns').",
+      "pattern": "^[a-z]+:[a-z0-9-]+$"
+    },
+    "jurisdiction": {
+      "type": "string",
+      "description": "ISO 3166 country code with optional sub-region. Used to select the applicable consent regime (COPPA, GDPR Art. 8, UK AADC, etc.).",
+      "pattern": "^[A-Z]{2}(-[A-Z]{2,3})?$"
+    },
+    "signature": {
+      "type": "object",
+      "required": ["alg", "value", "key_id"],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "enum": ["ed25519"]
+        },
+        "value": {
+          "type": "string",
+          "description": "Base64url-encoded signature over the canonical envelope (signature object excluded). MUST be produced by the issuer's registered key.",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "key_id": {
+          "type": "string",
+          "description": "Issuer's key identifier; resolves to a public key in the PCSS registry."
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Optional implementer-specific extensions. Keys MUST carry a vendor prefix.",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

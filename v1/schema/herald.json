@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcss.phosra-spec.org/v1/schema/herald.json",
+  "title": "PCSS Herald Envelope",
+  "description": "Notification and reporting envelope. Emitted by Lens / Aegis / Notary consumers and routed to parent, regulator, or civil-society subscribers. See PCSS §7.",
+  "type": "object",
+  "required": ["herald_id", "surface", "events", "issued_at", "issuer", "signature"],
+  "properties": {
+    "herald_id": {
+      "type": "string",
+      "description": "Stable, opaque identifier for this herald envelope.",
+      "pattern": "^hrld_[A-Za-z0-9_-]{16,128}$"
+    },
+    "surface": {
+      "type": "string",
+      "description": "The notification destination.",
+      "enum": ["parent", "regulator", "civil-society"]
+    },
+    "cadence": {
+      "type": "string",
+      "description": "The cadence under which this envelope is being delivered. 'immediate' MUST be used for Aegis hard-block events; 'daily' for privacy events; 'weekly' for aggregate usage.",
+      "enum": ["immediate", "daily", "weekly", "monthly", "on-request"]
+    },
+    "events": {
+      "type": "array",
+      "description": "The events being heralded. Each event references a receipt (for verdict events) or a bearing/threshold ID (for state-change events).",
+      "items": {
+        "type": "object",
+        "required": ["event_type", "occurred_at"],
+        "properties": {
+          "event_type": {
+            "type": "string",
+            "description": "Canonical event type. 'verdict:block' / 'verdict:allow' for Lens/Aegis decisions; 'threshold:granted' / 'threshold:revoked' for consent state; 'custody:deleted' for data deletion confirmations; 'bearing:rotated' for age signal rotations.",
+            "pattern": "^[a-z]+:[a-z0-9_-]+$"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "receipt_id": {
+            "type": "string",
+            "description": "Reference to a Notary receipt for verdict events.",
+            "pattern": "^ntry_[A-Za-z0-9_-]{16,128}$"
+          },
+          "bearing_id": {
+            "type": "string",
+            "description": "Opaque reference. Herald envelopes MUST NOT carry user-identifying data beyond the opaque ID.",
+            "pattern": "^brng_[A-Za-z0-9_-]{16,128}$"
+          },
+          "consent_id": {
+            "type": "string",
+            "pattern": "^thsh_[A-Za-z0-9_-]{16,128}$"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Human-readable single-line summary. Required for the 'parent' surface; optional for regulator/civil-society.",
+            "maxLength": 280
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 1000
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the herald envelope was emitted."
+    },
+    "issuer": {
+      "type": "string",
+      "description": "Registered identifier of the emitter (e.g., 'platform:roblox', 'app:bark', 'controls:nextdns').",
+      "pattern": "^[a-z]+:[a-z0-9-]+$"
+    },
+    "subscriber": {
+      "type": "string",
+      "description": "Registered identifier of the recipient (e.g., 'regulator:us-ftc', 'civil-society:commonsense', 'parent:opaque-handle'). MUST be omitted on parent-surface envelopes that carry user-identifying delivery routing in transport metadata.",
+      "pattern": "^[a-z]+:[a-z0-9-]+$"
+    },
+    "signature": {
+      "type": "object",
+      "required": ["alg", "value", "key_id"],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "enum": ["ed25519"]
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "key_id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -154,11 +154,98 @@ A Lens response is a Verdict envelope (see §9).
 
 ### §4.2 Default-deny
 
-When Lens cannot resolve a verdict (missing bearing, unknown surface, network error), the implementation **MUST** return `allow: false` with `reason: "lens_default_deny"` and cite the applicable jurisdictional default.
+When Lens cannot resolve a verdict (missing bearing, unknown surface, expired signature, unresolved issuer key, network error, ambiguous conflict per §4.3), the implementation **MUST** return a Verdict envelope with `allow: false`, `reason: "lens:default_deny"`, and the applicable jurisdictional default in the `cited` array. The HTTP transport binding **MUST** return this Verdict with status `200`; status `422` is reserved for envelopes that are syntactically malformed (do not validate against the JSON Schema) — in which case no Verdict is produced and the implementer **MUST NOT** allow the action.
+
+Default-deny is the cornerstone of PCSS safety: an implementer that cannot answer the question allows nothing, ever. It is **MUST NOT** acceptable to fail open under any circumstance, including service degradation, partial outages, or budget-driven rate-limiting.
 
 ### §4.3 Conflict resolution
 
-When two jurisdictional rule sets apply (e.g., a request from California with a bearing issued in EU), Lens **MUST** apply the stricter rule. The Verdict envelope **MUST** include both jurisdictions in its `cited` array.
+When two or more jurisdictional rule sets apply to a single Lens evaluation — for example, a request originating in California from a user with a Bearing issued by an EU provider — Lens **MUST** evaluate all applicable rule sets and apply the strictest combined outcome. The Verdict's `jurisdictions` array **MUST** list every jurisdiction whose rules contributed.
+
+#### §4.3.1 What "applicable" means
+
+A rule set is **applicable** to an evaluation if any of the following are true:
+
+- The request `jurisdiction` matches the rule's `jurisdiction` field (exact match or hierarchical: `US` matches `US-CA`).
+- The Bearing `jurisdiction` matches the rule's `jurisdiction` field (same hierarchical rule).
+- The Bearing's `issuer` is registered as operating under the rule's jurisdiction (e.g., `os:apple` is registered as operating under both `US` and `EU`).
+- The Bearing's `age_band` falls within the rule's `applies_to_ages` array.
+
+A rule whose `applies_to_ages` excludes the current Bearing's `age_band` is **not applicable** and **MUST NOT** be considered, even if its jurisdiction matches.
+
+#### §4.3.2 The stricter-rule order
+
+PCSS defines a partial order over rule outcomes. Outcomes are compared per-rule, then composed:
+
+1. `deny` > `warn` > `allow`. A `deny` outcome from any applicable rule wins over any combination of `warn` and `allow`.
+2. Within `deny`: a rule that denies a strict superset of actions wins. A rule that denies *all* recommender surfaces is stricter than a rule that denies only *personalized-by-affinity* recommender surfaces.
+3. Within `warn`: identical merging — the longest combined explanation wins.
+4. Within `allow`: identical merging — the union of granted scopes applies.
+
+When two rules produce identical outcomes (same verdict, same scope) under different jurisdictions, the implementer **MUST** merge them: a single Verdict with both jurisdictions in `jurisdictions[]` and both citations in `cited[]`.
+
+#### §4.3.3 Orthogonal-axis conflicts
+
+Some rules disagree on axes that are not directly comparable. For example, CA-AADC §22675(a)(7) requires opt-in for behavioral advertising; EU DSA Art. 28 requires algorithmic *transparency* (an explainability disclosure). One is a consent mechanism, the other a disclosure mechanism. Neither is stricter on the other's axis.
+
+In this case the implementer **MUST** apply both rules independently — opt-in *and* disclosure — and emit a single Verdict carrying both citations. The Verdict's `allow` field reflects the *combined* outcome: if either rule would deny under its axis, the combined Verdict denies.
+
+#### §4.3.4 Tie-breaking
+
+If two applicable rules produce contradictory outcomes that cannot be ordered (`deny` vs `allow` on the same scope, with no superset relationship), the implementer **MUST**:
+
+1. Default-deny per §4.2.
+2. Emit a Verdict with `reason: "lens:default_deny"` and both jurisdictions and rule slugs in `cited[]`.
+3. Log a Herald `regulator` surface notification within the §7.2 immediate cadence so the conflict is visible to the relevant regulators.
+
+A rule-registry conflict of this kind is a defect, not a runtime configuration. The Conformance Working Group **MUST** review any `lens:default_deny` Verdict citing two contradictory rules and propose an RFC to resolve the registry-level conflict.
+
+#### §4.3.5 Worked example
+
+A user with `bearing.age_band = "10-12"`, `bearing.jurisdiction = "EU-DE"`, `bearing.issuer = "os:apple"` requests `surface: "feed-rank"`, `capability: "recommender"`, request `jurisdiction: "US-CA"`.
+
+Applicable rule sets:
+
+- `us_kosa_recommender_off_minor` (jurisdiction `US`): `deny` for `age_band` ≤ 17 on `surface: feed-rank`.
+- `us_ca_aadc_recommender_consent` (jurisdiction `US-CA`): `deny` unless explicit opt-in for the same surface and age band.
+- `eu_dsa_minor_targeted_ad_ban` (jurisdiction `EU`): does not apply to recommender feeds per Art. 28; **not applicable**.
+- `eu_gdpr_age_of_consent` (jurisdiction `EU`): does not address recommender feeds; **not applicable**.
+
+Combined outcome: `deny` (both US rules deny). Verdict:
+
+```json
+{
+  "allow": false,
+  "reason": "lens:recommender_off_minor",
+  "cited": ["us_kosa§4(b)(2)", "us_ca_aadc§22675(a)(3)"],
+  "jurisdictions": ["US", "US-CA"]
+}
+```
+
+The EU jurisdictions are **not** cited because no EU rule was applicable. The Bearing's `jurisdiction = EU-DE` brought the EU rule registry into scope for evaluation, but the evaluation concluded none of those rules applied to this request.
+
+#### §4.3.6 Registry pinning
+
+A Verdict produced by Lens **SHOULD** carry a `registry_version` reference (slated for v1.1 as a normative MUST). Without registry pinning, Notary replay (§10.2) is non-deterministic across rule-registry updates: a Verdict produced at time T0 against registry vN cannot be byte-equal to a re-execution at time T1 against registry vN+1. v1.0 implementers **SHOULD** record the registry version they evaluated against in the Verdict's `extensions.registry_version` field.
+
+### §4.4 Surface registry
+
+Lens evaluations cite a `surface` field. The canonical v1.0 surfaces are:
+
+| Surface | Description |
+| --- | --- |
+| `feed-rank` | Algorithmic recommendation feeds; "what shows up when the user opens the app." |
+| `dm-inbound` | Direct messages received by the user. |
+| `dm-outbound` | Direct messages sent by the user. |
+| `purchase-flow` | Any commerce surface where the user can spend money or commit to a purchase. |
+| `chatbot` | Conversational AI interactions, including companion-style products. |
+| `livestream` | Video or audio streams produced or consumed live. |
+| `search` | Search query and result surfaces, including autocomplete. |
+| `account-creation` | Account signup and onboarding flows. |
+| `ugc-upload` | User-generated content upload and publication. |
+| `notification` | Push, email, or in-product notifications. |
+
+Implementers **MAY** register additional surfaces with a vendor prefix (e.g., `apple:appstore:rating-prompt`). Vendor-prefixed surfaces **MUST NOT** redefine the semantics of a canonical surface.
 
 ## §5 Threshold — parental consent
 
@@ -166,10 +253,13 @@ Threshold specifies the wire format for parental consent and access boundaries. 
 
 ### §5.1 Wire format
 
-A Threshold envelope is documented in [`v1/schema/threshold.json`](schema/threshold.json). It includes:
+A Threshold envelope **MUST** conform to [`v1/schema/threshold.json`](schema/threshold.json). The envelope includes:
 
 - `consent_id`: stable opaque identifier.
+- `bearing_id`: the Bearing envelope this consent is bound to. Consent is per-child, never global.
 - `granted_scope`: a list of scopes the parent has authorized (e.g., `dm:friends-only`, `purchases:requires-approval`, `feed:no-recommender`).
+- `vpc`: boolean. True if this consent satisfies COPPA §312.5 verifiable parental consent requirements.
+- `vpc_method`: when `vpc: true`, identifies which §312.5 method was used (`credit-card-plus-one`, `signed-form`, `video-conference`, etc.).
 - `revoked_at`: optional ISO 8601 timestamp if consent has been revoked.
 - Signature, issuer, and jurisdiction fields per Bearing (§3.1).
 
@@ -200,23 +290,65 @@ Aegis verdicts are always `allow: false` with `reason: aegis:<category>` and **M
 
 ## §7 Herald — notifications and reports
 
-Herald specifies the wire format for parent and regulator notifications.
+Herald specifies the wire format for parent, regulator, and civil-society notifications. Every enforcement decision produces a Verdict (§9); Herald routes derived events from those Verdicts to the parties that need to see them, without ever transmitting user-identifying data.
 
 ### §7.1 Surfaces
 
-Herald notifications target three surfaces:
+Herald notifications target three surfaces. A Herald envelope **MUST** declare its target surface in the `surface` field per [`v1/schema/herald.json`](schema/herald.json).
 
-- **Parent surface** — typically a parental-control app or OS notification.
-- **Regulator surface** — a signed receipt stream subscribed by a regulator.
-- **Civil-society surface** — a signed receipt stream subscribed by an accredited civil-society body.
+- **Parent surface.** A parental-control app, OS notification system, or email summary destined for the parent who issued the relevant Threshold consent. Parent-surface envelopes **MUST** include a `summary` field on every event (a human-readable single-line description, ≤280 characters). The transport layer carries the routing metadata; the envelope itself **MUST NOT** carry the parent's name, email, or device identifier.
+- **Regulator surface.** A signed event stream subscribed by a registered regulator (e.g., `regulator:us-ftc`, `regulator:eu-dsc-de`, `regulator:uk-ofcom`). The regulator subscribes by registering its public key against a `regulator:` issuer prefix; events are encrypted to that key in transport and signed by the issuer. The regulator can replay any cited receipt through `/notary/verify` (§10.2).
+- **Civil-society surface.** A signed event stream subscribed by an accredited civil-society body (e.g., `civil-society:commonsense`, `civil-society:fosi`). Accreditation criteria are defined by the Adopter Council; see [GOVERNANCE.md](../GOVERNANCE.md). Civil-society surfaces receive the same envelope as the regulator surface but **MUST NOT** receive event types tagged as `confidential` (e.g., active-investigation CSAM reports).
 
 ### §7.2 Cadence
 
-Herald **SHOULD** batch notifications to avoid alert fatigue. The recommended cadence is:
+Herald **SHOULD** batch notifications to avoid alert fatigue. The `cadence` field on every Herald envelope declares its batching rule. Default cadences:
 
-- Hard blocks (§6): immediate.
-- Privacy-relevant events (data access, profile change): daily summary.
-- Aggregated usage patterns: weekly summary.
+- **`immediate`** — Aegis hard-block events (§6). One envelope per event, dispatched within 60 seconds of the underlying Verdict. **MUST** be used for `aegis:csam`, `aegis:gambling-minors`, and any other Aegis category whose statutory basis demands real-time reporting.
+- **`daily`** — Privacy-relevant events (data access, profile change, Threshold revocation, Custody deletion). One envelope per recipient per day, batching all events from the prior 24 hours.
+- **`weekly`** — Aggregate usage patterns, Verdict allow-rates, Lens evaluation throughput. One envelope per recipient per week.
+- **`monthly`** — Conformance attestation summaries and trend reports.
+- **`on-request`** — Pull-style subscription where the recipient polls; reserved for civil-society research feeds where realtime push would burden the consumer.
+
+An envelope on the parent surface **MUST NOT** exceed 100 events; on the regulator and civil-society surfaces **MUST NOT** exceed 1000 events. Implementers exceeding these caps **MUST** split into multiple envelopes.
+
+### §7.3 Accreditation
+
+Civil-society subscribers **MUST** be accredited by the Adopter Council. Accreditation criteria, the application process, and the public registry of accredited bodies are documented in [GOVERNANCE.md](../GOVERNANCE.md). Regulators do not require accreditation; they self-attest by registering a `regulator:` issuer prefix tied to a statutory mandate.
+
+### §7.4 Privacy invariant
+
+Herald envelopes **MUST NOT** carry: parent name, child name, email address, phone number, device identifier, IP address, geolocation finer than the request's `jurisdiction`, or any field whose value is derived from one of the above. The opaque `bearing_id`, `consent_id`, and `receipt_id` references are the only subject-shaped identifiers permitted. Event-level summaries on the parent surface **MAY** include the child's first name only if the transport layer separately authenticates the parent recipient and the envelope is encrypted to the parent's device; in this case the implementer is treating the transport as part of the parent-surface trust boundary.
+
+## §8 Custody — data minimization and deletion
+
+Custody specifies the wire format for retention declarations, deletion requests, deletion-completion confirmations, and parent-initiated data exports. Every retention, deletion, or export action **MUST** be expressed as a Custody envelope per [`v1/schema/custody.json`](schema/custody.json).
+
+### §8.1 Retention
+
+PCSS-conformant implementations **MUST** declare a retention window for every category of PCSS-related data they hold, using a `retention-declaration` Custody envelope. The default retention window is **180 days from issued_at**; longer windows require a citation in the `statutory_basis` field (e.g., `18 U.S.C. §2258A` for CSAM evidence preservation; `26 U.S.C. §6001` for tax-records retention; `KOSA §6` for transparency-audit records).
+
+PCSS-related data **MUST** be deleted at the end of the declared retention window, including all derived data (analytics aggregates, training corpora, sub-processor copies). The implementer **MUST** emit a `deletion-completion` Custody envelope when retention-driven deletion occurs.
+
+The retention window applies to PCSS envelopes themselves (Bearings, Verdicts, Threshold grants, Receipts) and to any data derived from them. It does not apply to platform-native data (the user's account, content, social graph) that the implementer holds outside the PCSS layer.
+
+### §8.2 Deletion
+
+A user (or their parent, via a Threshold envelope) **MUST** be able to request deletion of their PCSS-related data. A deletion request is expressed as a `deletion-request` Custody envelope, signed by the parent's Threshold issuer.
+
+The implementer **MUST**:
+
+1. Acknowledge the deletion request within 24 hours by emitting a Herald event of type `custody:deletion-acknowledged` to the parent surface.
+2. Propagate the deletion request to every downstream consumer of the affected data within 30 days. Downstream consumers are enumerated in the `completion_receipt.downstream_consumers` array.
+3. Execute the deletion within 30 days of the request's `issued_at` timestamp.
+4. Emit a Notary-signed `deletion-completion` Custody envelope upon completion, with `completion_receipt.deleted_at` matching the actual deletion timestamp.
+5. Retain an opaque tombstone identifier (`completion_receipt.tombstone_id`) for audit purposes — the tombstone records that deletion occurred without retaining the deleted data itself.
+
+Deletion **MAY** be deferred where a statutory hold applies (active law-enforcement preservation order, NCMEC evidence retention, ongoing regulatory investigation); the statutory basis **MUST** be cited and the parent **MUST** be notified via a Herald event of type `custody:deletion-deferred` with the cited basis.
+
+### §8.3 Export
+
+A parent **MAY** request export of their child's PCSS-related data using an `export-request` Custody envelope. The implementer **MUST** produce a machine-readable JSON export, schema-validated, within 30 days. The export covers PCSS envelopes only; export of platform-native data is governed by the implementer's privacy policy and applicable statute, not by PCSS.
 
 ## §8 Custody — data minimization and deletion
 
@@ -284,14 +416,29 @@ Receipts **MUST NOT** carry PII. Receipts carry `bearing_id` (opaque) and `verdi
 
 ## §11 Conformance test plan
 
-See [`v1/conformance/`](conformance/). The conformance test plan defines:
+See [`v1/conformance/`](conformance/) for the full plan and fixtures. Conformance is asserted at three tiers, with strictly increasing requirements:
 
-- Schema validation cases (every wire envelope MUST validate against its JSON Schema).
-- Signature verification cases.
-- Cross-jurisdictional resolution cases.
-- Replay verification cases.
+### §11.1 Tiered conformance
 
-The conformance suite is `make conformance` runnable; results are published in `conformance-reports/` per adopter implementation.
+- **Tier-0 Implementer.** Reads the spec correctly. Implements at least one capability (Bearing-consumer, Lens-evaluator, Threshold-issuer, etc.). Passes Schema and Semantics test suites. Suitable for self-attestation by any builder; minimum for a registry listing.
+- **Tier-1 Adopter.** Tier-0 plus Replay and Negative test suites. Implements Notary on every decision (signs every Verdict). Required for consumer-facing surfaces and for "Charter Adopter" status.
+- **Tier-2 Custodian.** Tier-1 plus Privacy and Herald-subscriber tests. Implements Custody deletion propagation, regulator-surface Herald, and the Notary verify endpoint. Required for regulator-facing surfaces and to publish receipts to the conformance ledger.
+
+### §11.2 Test categories
+
+Each tier requires passing one or more test categories. Categories are:
+
+1. **Schema.** Every wire envelope produced or consumed by the implementer **MUST** validate against the JSON Schema in [`v1/schema/`](schema/). The conformance runner injects deliberate schema violations and asserts that the implementer rejects them per the additionalProperties rule.
+2. **Semantics.** A curated set of canonical (Bearing, surface, jurisdiction, capability) inputs **MUST** produce the expected Verdict with the expected `reason` code and `cited` array. The Phosra reference rules registry defines these expectations for the 15 priority rules in v1.0.
+3. **Replay.** Every Notary Receipt **MUST** re-execute through the implementer's Lens against the original Bearing and produce the same Verdict (semantic equivalence at Tier-1; byte-equal canonicalization at Tier-2).
+4. **Negative.** Malformed Bearings, expired signatures, unresolved issuers, and ambiguous rule conflicts **MUST** produce `lens:default_deny` Verdicts. PII smuggling attempts (e.g., injecting `email` at the top level of a Bearing) **MUST** be rejected.
+5. **Privacy.** Receipt envelopes **MUST NOT** carry PII. Herald envelopes on the regulator surface **MUST** batch per §7.2. Custody deletion propagation **MUST** complete within the §8.2 window.
+
+### §11.3 Self-attestation and the ledger
+
+A conformance run produces a Notary-style signed manifest containing the implementer identifier, declared tier, runner version, fixture set hash, and per-case results. Manifests are submitted to a public append-only conformance ledger; the "PCSS Conformant" trademark badge is gated on a current ledger entry. Tier-2 manifests **MUST** be co-signed by an independent witness from the PCSS witness registry (regulators, accredited civil-society bodies, or foundation-approved auditors).
+
+Manifests expire 365 days after `executed_at`; an expired badge is not a conformant badge.
 
 ## §12 References
 
