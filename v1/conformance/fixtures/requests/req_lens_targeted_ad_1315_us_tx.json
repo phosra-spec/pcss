@@ -1,0 +1,11 @@
+{
+  "$comment": "Targeted advertising for a 13-15 user — COPPA 2.0 ban applies (under 17).",
+  "operation": "lens.evaluate",
+  "bearing_fixture": "brng_us_tx_1315_inferred_google",
+  "body": {
+    "surface": "feed-rank",
+    "capability": "data-collection",
+    "jurisdiction": "US-TX"
+  },
+  "expected_verdict_fixture": "vrd_lens_targeted_ad_off_minor"
+}

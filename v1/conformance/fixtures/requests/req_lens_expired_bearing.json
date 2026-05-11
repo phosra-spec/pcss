@@ -1,0 +1,11 @@
+{
+  "$comment": "Negative: expired bearing should produce lens:default_deny per §3.4.1 → §4.2.",
+  "operation": "lens.evaluate",
+  "bearing_fixture": "brng_expired_us_ca_1012",
+  "body": {
+    "surface": "feed-rank",
+    "capability": "recommender",
+    "jurisdiction": "US-CA"
+  },
+  "expected_verdict_fixture": "vrd_lens_default_deny_expired"
+}

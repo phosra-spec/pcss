@@ -1,0 +1,10 @@
+{
+  "$comment": "COPPA 2.0 + state rules: behavioral ads off for users under 17.",
+  "allow": false,
+  "reason": "lens:targeted_ad_off_minor",
+  "cited": ["COPPA-2.0-§1303(b)"],
+  "bearing_id_from_fixture": "brng_us_tx_1315_inferred_google",
+  "surface": "feed-rank",
+  "capability": "lens",
+  "jurisdictions": ["US"]
+}

@@ -1,0 +1,10 @@
+{
+  "$comment": "Expired bearing → default-deny per §3.4.1 → §4.2.",
+  "allow": false,
+  "reason": "lens:default_deny",
+  "cited": ["PCSS-§4.2"],
+  "bearing_id_from_fixture": "brng_expired_us_ca_1012",
+  "surface": "feed-rank",
+  "capability": "lens",
+  "jurisdictions": ["US-CA"]
+}

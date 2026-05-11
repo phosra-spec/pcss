@@ -1,0 +1,10 @@
+{
+  "$comment": "Gambling product check for a minor — always denies.",
+  "operation": "aegis.check",
+  "bearing_fixture": "brng_us_ca_1012_attested_apple",
+  "body": {
+    "category": "gambling-minors",
+    "content": { "product_id": "test-gambling-product" }
+  },
+  "expected_verdict_fixture": "vrd_aegis_gambling_minor"
+}

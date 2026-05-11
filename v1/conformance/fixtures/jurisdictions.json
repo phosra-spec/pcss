@@ -1,0 +1,49 @@
+{
+  "$comment": "Jurisdiction registry mirroring v1/statutes/. Used by the conformance runner to know which rules apply where.",
+  "jurisdictions": [
+    {
+      "code": "US",
+      "name": "United States — Federal",
+      "applicable_statutes": ["KOSA", "COPPA", "COPPA-2.0", "FTC-Act-§5"]
+    },
+    {
+      "code": "US-CA",
+      "name": "California, United States",
+      "parent": "US",
+      "applicable_statutes": ["CA-AADC", "CA-AB-1043", "CA-SB-976"]
+    },
+    {
+      "code": "US-TX",
+      "name": "Texas, United States",
+      "parent": "US",
+      "applicable_statutes": ["TX-SCOPE-Act"]
+    },
+    {
+      "code": "US-NY",
+      "name": "New York, United States",
+      "parent": "US",
+      "applicable_statutes": ["NY-SAFE-for-Kids", "NY-S9051"]
+    },
+    {
+      "code": "EU",
+      "name": "European Union",
+      "applicable_statutes": ["EU-DSA", "EU-GDPR"]
+    },
+    {
+      "code": "DE",
+      "name": "Germany",
+      "parent": "EU",
+      "applicable_statutes": []
+    },
+    {
+      "code": "GB",
+      "name": "United Kingdom",
+      "applicable_statutes": ["UK-OSA", "UK-AADC"]
+    },
+    {
+      "code": "AU",
+      "name": "Australia",
+      "applicable_statutes": ["AU-Online-Safety-Act"]
+    }
+  ]
+}

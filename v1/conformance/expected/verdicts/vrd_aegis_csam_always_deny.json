@@ -1,0 +1,9 @@
+{
+  "$comment": "Aegis CSAM denies regardless of age band, even for an adult bearing.",
+  "allow": false,
+  "reason": "aegis:csam",
+  "cited": ["18-U.S.C.-§2258A"],
+  "bearing_id_from_fixture": "brng_au_adult_attested_msft",
+  "capability": "aegis",
+  "jurisdictions": ["AU"]
+}

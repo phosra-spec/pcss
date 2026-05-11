@@ -1,0 +1,14 @@
+{
+  "bearing_id": "brng_01HXYZ7P3K8MNQR4VWS2YTBCDF",
+  "age_band": "13-15",
+  "confidence": "inferred",
+  "issued_at": "2026-04-01T12:00:00Z",
+  "expires_at": "2026-07-01T12:00:00Z",
+  "issuer": "os:google",
+  "jurisdiction": "US-TX",
+  "signature": {
+    "alg": "ed25519",
+    "value": "FIXTURE_PLACEHOLDER_signed_by_conformance_test_key_us_tx_1315",
+    "key_id": "os:google:conformance-test-2026"
+  }
+}

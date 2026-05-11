@@ -1,0 +1,14 @@
+{
+  "bearing_id": "brng_01HXYZ7P3K8MNQR4VWS2YTBCDH",
+  "age_band": "6-9",
+  "confidence": "attested",
+  "issued_at": "2026-05-01T12:00:00Z",
+  "expires_at": "2027-05-01T12:00:00Z",
+  "issuer": "os:apple",
+  "jurisdiction": "GB",
+  "signature": {
+    "alg": "ed25519",
+    "value": "FIXTURE_PLACEHOLDER_signed_by_conformance_test_key_uk_69",
+    "key_id": "os:apple:conformance-test-2026"
+  }
+}

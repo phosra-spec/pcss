@@ -1,0 +1,14 @@
+{
+  "bearing_id": "brng_01HXYZ7P3K8MNQR4VWS2YTBCDJ",
+  "age_band": "13-15",
+  "confidence": "unverified",
+  "issued_at": "2026-05-08T12:00:00Z",
+  "expires_at": "2026-06-07T12:00:00Z",
+  "issuer": "account:roblox",
+  "jurisdiction": "US-NY",
+  "signature": {
+    "alg": "ed25519",
+    "value": "FIXTURE_PLACEHOLDER_signed_by_conformance_test_key_us_ny_1315",
+    "key_id": "account:roblox:conformance-test-2026"
+  }
+}

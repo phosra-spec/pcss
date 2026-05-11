@@ -1,0 +1,14 @@
+{
+  "bearing_id": "brng_01HXYZ7P3K8MNQR4VWS2YTBCDI",
+  "age_band": "adult",
+  "confidence": "attested",
+  "issued_at": "2026-05-01T12:00:00Z",
+  "expires_at": "2027-05-01T12:00:00Z",
+  "issuer": "os:microsoft",
+  "jurisdiction": "AU",
+  "signature": {
+    "alg": "ed25519",
+    "value": "FIXTURE_PLACEHOLDER_signed_by_conformance_test_key_au_adult",
+    "key_id": "os:microsoft:conformance-test-2026"
+  }
+}

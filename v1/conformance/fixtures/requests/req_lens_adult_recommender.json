@@ -1,0 +1,11 @@
+{
+  "$comment": "Adult user, no minor-specific rules apply — should allow.",
+  "operation": "lens.evaluate",
+  "bearing_fixture": "brng_au_adult_attested_msft",
+  "body": {
+    "surface": "feed-rank",
+    "capability": "recommender",
+    "jurisdiction": "AU"
+  },
+  "expected_verdict_fixture": "vrd_lens_no_applicable_rule_adult"
+}

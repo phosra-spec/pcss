@@ -1,0 +1,10 @@
+{
+  "$comment": "Adult user, recommender feed: no minor-specific rule applies.",
+  "allow": true,
+  "reason": "lens:no_applicable_rule",
+  "cited": [],
+  "bearing_id_from_fixture": "brng_au_adult_attested_msft",
+  "surface": "feed-rank",
+  "capability": "lens",
+  "jurisdictions": ["AU"]
+}

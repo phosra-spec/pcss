@@ -1,0 +1,10 @@
+{
+  "$comment": "Aegis CSAM check — always denies, regardless of bearing's age band.",
+  "operation": "aegis.check",
+  "bearing_fixture": "brng_au_adult_attested_msft",
+  "body": {
+    "category": "csam",
+    "content": { "hash": "fixture_csam_hash_match_for_testing" }
+  },
+  "expected_verdict_fixture": "vrd_aegis_csam_always_deny"
+}

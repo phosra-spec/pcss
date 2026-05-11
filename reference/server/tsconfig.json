@@ -1,0 +1,13 @@
+{
+  "extends": "../../sdk-typescript/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "paths": {
+      "@phosra/sdk": ["../../sdk-typescript/packages/sdk/src/index.ts"],
+      "@phosra/sdk/server": ["../../sdk-typescript/packages/sdk/src/server/index.ts"],
+      "@phosra/types": ["../../sdk-typescript/packages/types/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

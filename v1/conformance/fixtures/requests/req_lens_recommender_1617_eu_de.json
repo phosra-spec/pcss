@@ -1,0 +1,11 @@
+{
+  "$comment": "Recommender for 16-17 in EU-DE — DSA Art. 28 ban on targeted ads applies but recommender itself is permitted with audit obligations.",
+  "operation": "lens.evaluate",
+  "bearing_fixture": "brng_eu_de_1617_attested_yoti",
+  "body": {
+    "surface": "feed-rank",
+    "capability": "recommender",
+    "jurisdiction": "EU"
+  },
+  "expected_verdict_fixture": "vrd_lens_recommender_eu_with_transparency"
+}

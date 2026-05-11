@@ -1,0 +1,11 @@
+{
+  "$comment": "Lens evaluation for a 10-12 attested CA user on a recommender surface. Expected: deny per kosa_recommender_off_minor + ca_aadc_recommender_consent.",
+  "operation": "lens.evaluate",
+  "bearing_fixture": "brng_us_ca_1012_attested_apple",
+  "body": {
+    "surface": "feed-rank",
+    "capability": "recommender",
+    "jurisdiction": "US-CA"
+  },
+  "expected_verdict_fixture": "vrd_lens_recommender_1012_us_ca"
+}

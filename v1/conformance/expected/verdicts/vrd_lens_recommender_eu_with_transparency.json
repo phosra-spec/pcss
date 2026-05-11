@@ -1,0 +1,10 @@
+{
+  "$comment": "EU recommender for 16-17 — allowed but with transparency obligation heralded.",
+  "allow": true,
+  "reason": "lens:recommender_with_transparency",
+  "cited": ["EU-DSA-Art.27"],
+  "bearing_id_from_fixture": "brng_eu_de_1617_attested_yoti",
+  "surface": "feed-rank",
+  "capability": "lens",
+  "jurisdictions": ["EU"]
+}
