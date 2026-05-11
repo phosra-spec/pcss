@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcss.phosra-spec.org/v1/schema/rule.json",
+  "title": "PCSS Rule Registry Entry",
+  "description": "A single rule in the PCSS rule registry. Each rule maps a statutory requirement to a PCSS capability. The registry as a whole is the cross-jurisdictional rulebook.",
+  "type": "object",
+  "required": ["slug", "capability", "category", "statutes", "summary"],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "description": "Canonical slug for the rule. Used in Verdict reason codes.",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "capability": {
+      "type": "string",
+      "enum": ["charter", "bearing", "lens", "threshold", "aegis", "herald", "custody", "verdict", "notary"],
+      "description": "Which PCSS capability implements this rule."
+    },
+    "category": {
+      "type": "string",
+      "description": "Categorical group (e.g., 'algorithmic', 'privacy', 'access_control', 'content').",
+      "pattern": "^[a-z_]+$"
+    },
+    "statutes": {
+      "type": "array",
+      "description": "Statutes this rule maps to.",
+      "items": {
+        "type": "object",
+        "required": ["jurisdiction", "citation"],
+        "properties": {
+          "jurisdiction": { "type": "string", "pattern": "^[A-Z]{2}(-[A-Z]{2,3})?$" },
+          "citation": { "type": "string", "examples": ["KOSA-§4(b)(2)", "CA-AADC-§22675(a)(2)"] },
+          "url": { "type": "string", "format": "uri" }
+        }
+      },
+      "minItems": 1
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-line summary of the rule.",
+      "maxLength": 200
+    },
+    "applies_to_ages": {
+      "type": "array",
+      "description": "Which Bearing age_bands trigger this rule.",
+      "items": {
+        "type": "string",
+        "enum": ["0-5", "6-9", "10-12", "13-15", "16-17", "adult"]
+      }
+    },
+    "default_outcome": {
+      "type": "string",
+      "enum": ["allow", "deny", "warn"],
+      "description": "Default outcome when rule is triggered. Most enforcement rules default to 'deny'."
+    },
+    "introduced_in": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+",
+      "description": "PCSS version in which this rule was introduced."
+    },
+    "deprecated_in": {
+      "type": "string",
+      "pattern": "^v[0-9]+\\.[0-9]+",
+      "description": "PCSS version in which this rule was deprecated."
+    }
+  },
+  "additionalProperties": false
+}

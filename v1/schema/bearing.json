@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pcss.phosra-spec.org/v1/schema/bearing.json",
+  "title": "PCSS Bearing Envelope",
+  "description": "The canonical age signal — produced by a Bearing Provider (typically an OS, account-level service, or third-party verifier) and consumed by Lens, Threshold, Aegis, and other PCSS runtime capabilities. See PCSS §3.",
+  "type": "object",
+  "required": ["bearing_id", "age_band", "confidence", "issued_at", "issuer", "jurisdiction", "signature"],
+  "properties": {
+    "bearing_id": {
+      "type": "string",
+      "description": "Stable, opaque identifier for this bearing envelope. MUST NOT be reused across users.",
+      "pattern": "^brng_[A-Za-z0-9_-]{16,128}$"
+    },
+    "age_band": {
+      "type": "string",
+      "enum": ["0-5", "6-9", "10-12", "13-15", "16-17", "adult"],
+      "description": "Coarse age band. Exact ages MUST NOT be transmitted."
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["attested", "inferred", "unverified"],
+      "description": "How the age signal was established. 'attested' implies verifiable parental consent (VPC); 'inferred' implies behavioral or account signals; 'unverified' implies no positive establishment."
+    },
+    "issued_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this envelope was issued."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional ISO 8601 timestamp after which the envelope MUST be re-issued. Default: 30 days for unverified, 90 days for inferred, 365 days for attested."
+    },
+    "issuer": {
+      "type": "string",
+      "description": "Registered identifier of the Bearing Provider that issued this envelope. e.g., 'os:apple', 'os:google', 'verifier:yoti'.",
+      "pattern": "^(os|account|verifier|civil-society):[a-z0-9-]+$"
+    },
+    "jurisdiction": {
+      "type": "string",
+      "description": "ISO 3166 country code with optional sub-region. e.g., 'US-CA', 'EU', 'UK', 'AU'.",
+      "pattern": "^[A-Z]{2}(-[A-Z]{2,3})?$"
+    },
+    "signature": {
+      "type": "object",
+      "required": ["alg", "value"],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "enum": ["ed25519"]
+        },
+        "value": {
+          "type": "string",
+          "description": "Base64url-encoded signature over the canonical JSON form of the envelope (with the signature object excluded).",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        },
+        "key_id": {
+          "type": "string",
+          "description": "Issuer's key identifier; resolves to a public key in the PCSS registry."
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Optional implementer-specific extensions. Keys MUST carry a vendor prefix (e.g., 'apple:').",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

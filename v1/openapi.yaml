@@ -1,0 +1,280 @@
+openapi: 3.1.0
+
+info:
+  title: PCSS — Phosra Child Safety Specification
+  version: "1.0.0-public-review"
+  description: |
+    The runtime API surface for the Phosra Child Safety Specification.
+    PCSS defines a wire format between the demand side of the child-safety
+    network (parents, parental-control products, schools) and the supply
+    side (platforms, OS makers, device makers, ISPs).
+
+    This OpenAPI document is the machine-readable form of PCSS v1.0. The
+    canonical spec lives in [pcss-v1.0.md](pcss-v1.0.md).
+
+    Status: v1.0 public review. NOT yet ratified by an independent body.
+    See [GOVERNANCE.md](../GOVERNANCE.md).
+  license:
+    name: CC BY 4.0
+    url: https://creativecommons.org/licenses/by/4.0/
+  contact:
+    name: PCSS maintainers
+    url: https://github.com/phosra-spec/pcss
+
+servers:
+  - url: https://api.phosra.com/v1
+    description: Phosra reference implementation
+  - url: https://{adopter}.{tld}/pcss/v1
+    description: Adopter-hosted endpoint
+    variables:
+      adopter:
+        default: api
+      tld:
+        default: example.com
+
+tags:
+  - name: bearing
+    description: "Capability §3: Canonical age signal."
+  - name: lens
+    description: "Capability §4: Tier evaluation."
+  - name: threshold
+    description: "Capability §5: Parental consent + access boundaries."
+  - name: aegis
+    description: "Capability §6: Hard blocks."
+  - name: herald
+    description: "Capability §7: Notifications and reports."
+  - name: custody
+    description: "Capability §8: Data minimization and deletion."
+  - name: verdict
+    description: "Capability §9: Algorithmic audit decisions."
+  - name: notary
+    description: "Capability §10: Signed receipts."
+
+paths:
+  /bearing/identify:
+    post:
+      tags: [bearing]
+      summary: Issue or fetch the canonical age signal for the requesting user
+      description: |
+        Bearing.identify is invoked by a Bearing Consumer (e.g., a
+        parental-control app or platform Lens evaluator) to obtain the
+        canonical age signal for the current user. See PCSS §3.
+      operationId: bearingIdentify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject]
+              properties:
+                subject:
+                  type: object
+                  description: Opaque subject identifier (e.g., OS account, platform account, or third-party verifier handle).
+                jurisdiction:
+                  type: string
+                  pattern: "^[A-Z]{2}(-[A-Z]{2,3})?$"
+                acceptable_confidence:
+                  type: array
+                  items:
+                    type: string
+                    enum: [attested, inferred, unverified]
+      responses:
+        "200":
+          description: Bearing envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "schema/bearing.json"
+        "401":
+          description: Authentication required.
+        "404":
+          description: No bearing available for this subject.
+
+  /lens/evaluate:
+    post:
+      tags: [lens]
+      summary: Evaluate which rules apply for a (bearing, surface, jurisdiction) triple
+      description: |
+        Lens.evaluate is invoked by an implementer (typically a platform
+        or parental-control app) to determine the applicable rules for a
+        given user action. Returns a Verdict envelope. See PCSS §4.
+      operationId: lensEvaluate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bearing, surface, capability]
+              properties:
+                bearing:
+                  $ref: "schema/bearing.json"
+                surface:
+                  type: string
+                  description: Registered surface identifier (e.g., `feed-rank`, `dm-inbound`, `purchase-flow`).
+                capability:
+                  type: string
+                  description: Consumer capability (`recommender`, `messaging`, `commerce`, `content-feed`, `chatbot`, etc.).
+                jurisdiction:
+                  type: string
+                  pattern: "^[A-Z]{2}(-[A-Z]{2,3})?$"
+      responses:
+        "200":
+          description: Verdict envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "schema/verdict.json"
+        "422":
+          description: Bearing envelope invalid (expired signature, unresolved issuer, schema violation). Implementer MUST default-deny per §4.2.
+
+  /threshold/check:
+    post:
+      tags: [threshold]
+      summary: Check that parental consent has been granted for a given scope
+      operationId: thresholdCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bearing, scope]
+              properties:
+                bearing:
+                  $ref: "schema/bearing.json"
+                scope:
+                  type: string
+                  description: Requested scope (e.g., `dm:friends-only`, `purchases:requires-approval`).
+      responses:
+        "200":
+          description: Threshold verdict.
+          content:
+            application/json:
+              schema:
+                $ref: "schema/verdict.json"
+
+  /aegis/check:
+    post:
+      tags: [aegis]
+      summary: Check whether an action triggers a non-negotiable block
+      description: |
+        Aegis.check is invoked before any action that might fall into a
+        hard-block category (CSAM, gambling for minors, dark patterns).
+        See PCSS §6.
+      operationId: aegisCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bearing, category, content]
+              properties:
+                bearing:
+                  $ref: "schema/bearing.json"
+                category:
+                  type: string
+                  enum: [csam, gambling-minors, dark-patterns, age-inappropriate-monetization]
+                content:
+                  type: object
+                  description: Implementation-specific. May include image hash, URL, etc.
+      responses:
+        "200":
+          description: Aegis verdict. allow is always false; reason carries the category.
+          content:
+            application/json:
+              schema:
+                $ref: "schema/verdict.json"
+
+  /notary/sign:
+    post:
+      tags: [notary]
+      summary: Sign a verdict to produce a regulator-replayable receipt
+      operationId: notarySign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verdict]
+              properties:
+                verdict:
+                  $ref: "schema/verdict.json"
+      responses:
+        "200":
+          description: Signed Notary Receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "schema/receipt.json"
+
+  /notary/verify:
+    post:
+      tags: [notary]
+      summary: Verify a receipt's signature and replay its underlying verdict
+      operationId: notaryVerify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receipt]
+              properties:
+                receipt:
+                  $ref: "schema/receipt.json"
+      responses:
+        "200":
+          description: Verification result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [valid, replays]
+                properties:
+                  valid:
+                    type: boolean
+                    description: True if signature is valid and the receipt is within its expiration window.
+                  replays:
+                    type: boolean
+                    description: True if re-executing the underlying Lens evaluation produces the same verdict.
+
+  /registry/rules:
+    get:
+      tags: [lens]
+      summary: List all rules in the PCSS registry
+      operationId: registryListRules
+      parameters:
+        - name: capability
+          in: query
+          schema:
+            type: string
+            enum: [bearing, lens, threshold, aegis, herald, custody, verdict, notary]
+        - name: jurisdiction
+          in: query
+          schema:
+            type: string
+            pattern: "^[A-Z]{2}(-[A-Z]{2,3})?$"
+      responses:
+        "200":
+          description: Array of rule registry entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "schema/rule.json"
+
+components:
+  schemas:
+    Bearing:
+      $ref: "schema/bearing.json"
+    Verdict:
+      $ref: "schema/verdict.json"
+    Receipt:
+      $ref: "schema/receipt.json"
+    Rule:
+      $ref: "schema/rule.json"
