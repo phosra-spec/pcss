@@ -1,8 +1,14 @@
 /**
- * PCSS Reference Server — v0.1
+ * PCSS Reference Server — v0.2
  *
  * Implements the v1/openapi.yaml surface using @phosra/sdk/server for
  * canonicalization, Lens evaluation, and Notary signing.
+ *
+ * v0.2 changes:
+ * - Real ed25519 signing on Bearings (was placeholder string)
+ * - Separate signing keys for Bearing issuance vs. Notary
+ * - /registry/keys/:keyId endpoint
+ * - Replay-able notary.verify (reads stored Bearing from MemoryStore)
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
@@ -11,6 +17,7 @@ import { fileURLToPath } from "node:url"
 import * as ed25519 from "@noble/ed25519"
 import Fastify from "fastify"
 import {
+  canonicalizeBuffer,
   lensEvaluate,
   notarySign,
   notaryVerify,
@@ -24,67 +31,115 @@ const PORT = Number(process.env.PORT ?? 7474)
 const HOST = process.env.HOST ?? "0.0.0.0"
 const KEY_PATH = process.env.KEY_PATH ?? join(__dirname, "..", ".pcss-reference-key.json")
 const RULES_DIR = process.env.RULES_DIR ?? join(__dirname, "..", "..", "..", "v1", "rules")
-const KEY_ID = process.env.KEY_ID ?? "reference:pcss-dev:2026-q2"
+const NOTARY_KEY_ID = process.env.NOTARY_KEY_ID ?? "reference:pcss-dev:notary-2026-q2"
+const BEARING_KEY_ID = process.env.BEARING_KEY_ID ?? "reference:pcss-dev:bearing-2026-q2"
+
+interface KeyPair {
+  privateKey: Uint8Array
+  publicKey: Uint8Array
+  keyId: string
+}
 
 // ── Key material ──────────────────────────────────────────────────────────
 
-async function loadOrGenerateKey(): Promise<{ privateKey: Uint8Array; publicKey: Uint8Array; keyId: string }> {
+async function loadOrGenerateKeys(): Promise<{ bearing: KeyPair; notary: KeyPair }> {
   if (existsSync(KEY_PATH)) {
     const json = JSON.parse(readFileSync(KEY_PATH, "utf8"))
     return {
-      privateKey: Uint8Array.from(Buffer.from(json.privateKey, "base64")),
-      publicKey: Uint8Array.from(Buffer.from(json.publicKey, "base64")),
-      keyId: json.keyId,
+      bearing: {
+        privateKey: Uint8Array.from(Buffer.from(json.bearing.privateKey, "base64")),
+        publicKey: Uint8Array.from(Buffer.from(json.bearing.publicKey, "base64")),
+        keyId: json.bearing.keyId,
+      },
+      notary: {
+        privateKey: Uint8Array.from(Buffer.from(json.notary.privateKey, "base64")),
+        publicKey: Uint8Array.from(Buffer.from(json.notary.publicKey, "base64")),
+        keyId: json.notary.keyId,
+      },
     }
   }
-  const privateKey = ed25519.utils.randomPrivateKey()
-  const publicKey = await ed25519.getPublicKeyAsync(privateKey)
+  const bearingPriv = ed25519.utils.randomPrivateKey()
+  const bearingPub = await ed25519.getPublicKeyAsync(bearingPriv)
+  const notaryPriv = ed25519.utils.randomPrivateKey()
+  const notaryPub = await ed25519.getPublicKeyAsync(notaryPriv)
+
   writeFileSync(
     KEY_PATH,
     JSON.stringify(
       {
-        keyId: KEY_ID,
-        privateKey: Buffer.from(privateKey).toString("base64"),
-        publicKey: Buffer.from(publicKey).toString("base64"),
+        bearing: {
+          keyId: BEARING_KEY_ID,
+          privateKey: Buffer.from(bearingPriv).toString("base64"),
+          publicKey: Buffer.from(bearingPub).toString("base64"),
+        },
+        notary: {
+          keyId: NOTARY_KEY_ID,
+          privateKey: Buffer.from(notaryPriv).toString("base64"),
+          publicKey: Buffer.from(notaryPub).toString("base64"),
+        },
         generated_at: new Date().toISOString(),
       },
       null,
       2,
     ),
   )
-  console.error(`[ref-server] generated key ${KEY_ID}; public key: ${Buffer.from(publicKey).toString("base64url")}`)
-  return { privateKey, publicKey, keyId: KEY_ID }
+  console.error(`[ref-server] generated keys:`)
+  console.error(`  ${BEARING_KEY_ID}  pub=${Buffer.from(bearingPub).toString("base64url")}`)
+  console.error(`  ${NOTARY_KEY_ID}   pub=${Buffer.from(notaryPub).toString("base64url")}`)
+
+  return {
+    bearing: { privateKey: bearingPriv, publicKey: bearingPub, keyId: BEARING_KEY_ID },
+    notary: { privateKey: notaryPriv, publicKey: notaryPub, keyId: NOTARY_KEY_ID },
+  }
+}
+
+// Sign a Bearing envelope with the reference's bearing key, using the same
+// JCS + domain-prefix canonicalization as Notary (§10.2.1).
+async function signBearing(
+  body: Omit<Bearing, "signature">,
+  signer: KeyPair,
+): Promise<Bearing> {
+  const message = canonicalizeBuffer(body)
+  const sigBytes = await ed25519.signAsync(message, signer.privateKey)
+  return {
+    ...body,
+    signature: {
+      alg: "ed25519",
+      value: Buffer.from(sigBytes).toString("base64url"),
+      key_id: signer.keyId,
+    },
+  }
 }
 
 // ── Server ────────────────────────────────────────────────────────────────
 
 async function main() {
-  const { privateKey, publicKey, keyId } = await loadOrGenerateKey()
+  const keys = await loadOrGenerateKeys()
   const rules: Rule[] = loadRules(RULES_DIR)
   const store = new MemoryStore()
   const fastify = Fastify({ logger: { level: process.env.LOG_LEVEL ?? "info" } })
 
   console.error(`[ref-server] loaded ${rules.length} rules from ${RULES_DIR}`)
 
-  // POST /v1/bearing/identify ─ stub. A real Bearing Provider lives behind the OS.
+  // POST /v1/bearing/identify ─ issues a properly-signed Bearing.
+  // A real Bearing Provider lives behind the OS; this reference signs with
+  // the reference's bearing key so adopters have something to verify against.
   fastify.post("/v1/bearing/identify", async (req, reply) => {
     const body = req.body as { subject?: { account_id?: string }; jurisdiction?: string }
     const accountId = body?.subject?.account_id ?? "anonymous"
 
-    const bearing: Bearing = {
-      bearing_id: stableBrng(accountId),
-      age_band: inferAgeBand(accountId),
-      confidence: "unverified",
-      issued_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      issuer: "reference:pcss-dev",
-      jurisdiction: body?.jurisdiction ?? "US",
-      signature: {
-        alg: "ed25519",
-        value: "REFERENCE_PLACEHOLDER_signing_not_implemented_for_bearings",
-        key_id: keyId,
+    const bearing = await signBearing(
+      {
+        bearing_id: stableBrng(accountId),
+        age_band: inferAgeBand(accountId),
+        confidence: "unverified",
+        issued_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        issuer: "reference:pcss-dev",
+        jurisdiction: body?.jurisdiction ?? "US",
       },
-    }
+      keys.bearing,
+    )
 
     store.putBearing(bearing)
     return reply.send(bearing)
@@ -163,8 +218,8 @@ async function main() {
     const body = req.body as { verdict?: Verdict }
     if (!body?.verdict) return reply.code(422).send({ error: "verdict required" })
     const receipt = await notarySign(body.verdict, {
-      keyId,
-      privateKey,
+      keyId: keys.notary.keyId,
+      privateKey: keys.notary.privateKey,
       implementer: "reference:pcss-dev",
     })
     store.putReceipt(receipt)
@@ -176,7 +231,11 @@ async function main() {
     const body = req.body as { receipt?: Record<string, unknown> }
     if (!body?.receipt) return reply.code(422).send({ error: "receipt required" })
     const result = await notaryVerify(body.receipt as Parameters<typeof notaryVerify>[0], {
-      resolveKey: async (kid) => (kid === keyId ? publicKey : null),
+      resolveKey: async (kid) => {
+        if (kid === keys.notary.keyId) return keys.notary.publicKey
+        if (kid === keys.bearing.keyId) return keys.bearing.publicKey
+        return null
+      },
       replay: async (rcpt) => {
         const original = store.getBearing(rcpt.bearing_id)
         if (!original) return null
@@ -190,6 +249,50 @@ async function main() {
       },
     })
     return reply.send(result)
+  })
+
+  // GET /v1/registry/keys/:keyId — resolve a public key for third-party verifiers.
+  fastify.get("/v1/registry/keys/:keyId", async (req, reply) => {
+    const { keyId } = req.params as { keyId: string }
+    if (keyId === keys.notary.keyId) {
+      return reply.send({
+        key_id: keys.notary.keyId,
+        alg: "ed25519",
+        public_key: Buffer.from(keys.notary.publicKey).toString("base64url"),
+        purpose: "notary",
+        active: true,
+      })
+    }
+    if (keyId === keys.bearing.keyId) {
+      return reply.send({
+        key_id: keys.bearing.keyId,
+        alg: "ed25519",
+        public_key: Buffer.from(keys.bearing.publicKey).toString("base64url"),
+        purpose: "bearing-issuance",
+        active: true,
+      })
+    }
+    return reply.code(404).send({ error: "key_id not found" })
+  })
+
+  // GET /v1/registry/keys — list all keys this reference advertises.
+  fastify.get("/v1/registry/keys", async (_req, reply) => {
+    return reply.send([
+      {
+        key_id: keys.bearing.keyId,
+        alg: "ed25519",
+        public_key: Buffer.from(keys.bearing.publicKey).toString("base64url"),
+        purpose: "bearing-issuance",
+        active: true,
+      },
+      {
+        key_id: keys.notary.keyId,
+        alg: "ed25519",
+        public_key: Buffer.from(keys.notary.publicKey).toString("base64url"),
+        purpose: "notary",
+        active: true,
+      },
+    ])
   })
 
   // GET /v1/registry/rules
@@ -210,9 +313,21 @@ async function main() {
     return reply.send({
       service: "PCSS Reference Server",
       spec: "PCSS-v1.0",
-      key_id: keyId,
-      public_key: Buffer.from(publicKey).toString("base64url"),
+      keys: {
+        bearing: {
+          key_id: keys.bearing.keyId,
+          public_key: Buffer.from(keys.bearing.publicKey).toString("base64url"),
+        },
+        notary: {
+          key_id: keys.notary.keyId,
+          public_key: Buffer.from(keys.notary.publicKey).toString("base64url"),
+        },
+      },
       rules_loaded: rules.length,
+      registry: {
+        keys_url: "/v1/registry/keys",
+        rules_url: "/v1/registry/rules",
+      },
       docs: "https://github.com/phosra-spec/pcss",
     })
   })

@@ -91,87 +91,155 @@ export class PhosraClient {
   }
 
   /** @internal */
-  async _request<T>(path: string, init: RequestInit & { body?: unknown }): Promise<T> {
+  async _request<T>(
+    path: string,
+    init: RequestInit & { body?: unknown; idempotencyKey?: string },
+  ): Promise<T> {
     const baseUrl = this.opts.baseUrl ?? DEFAULT_BASE_URL
     const url = baseUrl.replace(/\/$/, "") + path
     const fetcher = this.opts.fetch ?? globalThis.fetch
-    const headers: Record<string, string> = {
+    const idempotencyKey = init.idempotencyKey ?? this._idempotencyKey()
+    const baseHeaders: Record<string, string> = {
       "content-type": "application/json",
       "accept": "application/json",
-      "idempotency-key": this._ulid(),
+      "idempotency-key": idempotencyKey,
     }
-    if (this.opts.implementer) headers["x-phosra-implementer"] = this.opts.implementer
+    if (this.opts.implementer) baseHeaders["x-phosra-implementer"] = this.opts.implementer
     if (this.opts.auth?.kind === "bearer") {
-      headers["authorization"] = `Bearer ${this.opts.auth.token}`
+      baseHeaders["authorization"] = `Bearer ${this.opts.auth.token}`
     }
-    const controller = new AbortController()
+
+    const attempts = this.opts.retry?.attempts ?? 3
+    const backoff = this.opts.retry?.backoff ?? "decorrelated-jitter"
     const timeoutMs = this.opts.timeoutMs ?? 5_000
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
-    let response: Response
-    try {
-      response = await fetcher(url, {
-        ...init,
-        headers: { ...headers, ...(init.headers ?? {}) },
-        body: init.body == null ? undefined : JSON.stringify(init.body),
-        signal: controller.signal,
-      })
-    } catch (err) {
-      throw new PhosraError({
-        code: "network",
-        message: `request failed: ${String(err)}`,
-        cause: err,
-        retryable: true,
-      })
-    } finally {
-      clearTimeout(timeout)
-    }
+    let lastErr: PhosraError | undefined
+    let prevDelay = 100
 
-    const requestId = response.headers.get("x-request-id") ?? undefined
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
-    if (response.status === 401) {
-      throw new PhosraError({
-        code: "unauthorized",
-        message: "unauthorized — check auth configuration",
-        status: 401,
-        requestId,
-      })
+      let response: Response | undefined
+      try {
+        response = await fetcher(url, {
+          ...init,
+          headers: { ...baseHeaders, ...(init.headers ?? {}) },
+          body: init.body == null ? undefined : JSON.stringify(init.body),
+          signal: controller.signal,
+        })
+      } catch (err) {
+        lastErr = new PhosraError({
+          code: "network",
+          message: `request failed: ${String(err)}`,
+          cause: err,
+          retryable: true,
+        })
+      } finally {
+        clearTimeout(timeout)
+      }
+
+      if (response) {
+        const requestId = response.headers.get("x-request-id") ?? undefined
+        if (response.status === 401) {
+          throw new PhosraError({
+            code: "unauthorized",
+            message: "unauthorized — check auth configuration",
+            status: 401,
+            requestId,
+          })
+        }
+        if (response.status === 422) {
+          throw new PhosraError({
+            code: "schema_invalid",
+            message: "request body does not validate against the schema",
+            status: 422,
+            requestId,
+          })
+        }
+        if (response.status === 429) {
+          const retryAfter = parseRetryAfter(response.headers.get("retry-after"))
+          lastErr = new PhosraError({
+            code: "network",
+            message: "rate limited",
+            status: 429,
+            retryable: true,
+            requestId,
+          })
+          if (attempt < attempts - 1) {
+            await sleep(retryAfter ?? nextBackoff(prevDelay, backoff))
+            prevDelay = Math.min(prevDelay * 3, 30_000)
+            continue
+          }
+          throw lastErr
+        }
+        if (response.status >= 500) {
+          lastErr = new PhosraError({
+            code: "network",
+            message: `server error ${response.status}`,
+            status: response.status,
+            retryable: true,
+            requestId,
+          })
+          if (attempt < attempts - 1) {
+            await sleep(nextBackoff(prevDelay, backoff))
+            prevDelay = Math.min(prevDelay * 3, 30_000)
+            continue
+          }
+          throw lastErr
+        }
+        if (!response.ok) {
+          throw new PhosraError({
+            code: "internal",
+            message: `unexpected ${response.status}`,
+            status: response.status,
+            requestId,
+          })
+        }
+        return (await response.json()) as T
+      }
+
+      // Network error path: retry if we have attempts left.
+      if (attempt < attempts - 1) {
+        await sleep(nextBackoff(prevDelay, backoff))
+        prevDelay = Math.min(prevDelay * 3, 30_000)
+        continue
+      }
+      throw lastErr!
     }
-    if (response.status === 422) {
-      throw new PhosraError({
-        code: "schema_invalid",
-        message: "request body does not validate against the schema",
-        status: 422,
-        requestId,
-      })
-    }
-    if (response.status >= 500) {
-      throw new PhosraError({
-        code: "network",
-        message: `server error ${response.status}`,
-        status: response.status,
-        retryable: true,
-        requestId,
-      })
-    }
-    if (!response.ok) {
-      throw new PhosraError({
-        code: "internal",
-        message: `unexpected ${response.status}`,
-        status: response.status,
-        requestId,
-      })
-    }
-    return (await response.json()) as T
+    throw lastErr ?? new PhosraError({ code: "internal", message: "exhausted retries with no response" })
   }
 
-  /** @internal — ULID-style request key */
-  _ulid(): string {
-    return (
-      Date.now().toString(36) +
-      Math.random().toString(36).slice(2, 12)
-    )
+  /** @internal — collision-resistant idempotency key via Web Crypto */
+  _idempotencyKey(): string {
+    const g = globalThis as { crypto?: { randomUUID?: () => string } }
+    return g.crypto?.randomUUID?.() ?? Date.now().toString(36) + Math.random().toString(36).slice(2, 12)
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function nextBackoff(prevDelayMs: number, mode: "decorrelated-jitter" | "exponential" | "none"): number {
+  if (mode === "none") return 0
+  if (mode === "exponential") return Math.min(prevDelayMs * 2, 30_000)
+  // decorrelated jitter (AWS): random between base and prev*3
+  const base = 100
+  return Math.min(30_000, base + Math.random() * (prevDelayMs * 3 - base))
+}
+
+function parseRetryAfter(header: string | null): number | undefined {
+  if (!header) return undefined
+  // RFC 7231: either delta-seconds or HTTP-date
+  const seconds = Number(header)
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
+  const dateMs = Date.parse(header)
+  if (Number.isFinite(dateMs)) {
+    const ms = dateMs - Date.now()
+    return ms > 0 ? ms : 0
+  }
+  return undefined
 }
 
 class BearingNamespace {
