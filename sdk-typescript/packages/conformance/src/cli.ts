@@ -31,9 +31,7 @@ async function main() {
     endpoint: args.endpoint,
     tier: Number(args.tier) as ConformanceTier,
     implementer: args.implementer,
-    authHeader: args["auth-header"],
-    signingKeyPath: args["signing-key"],
-    reportPath: args.report,
+    ...(args["auth-header"] ? { authHeader: args["auth-header"] } : {}),
   })
 
   const json = JSON.stringify(report, null, 2)

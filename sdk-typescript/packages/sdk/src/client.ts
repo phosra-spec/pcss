@@ -17,32 +17,32 @@ export type PhosraErrorCode =
 
 export class PhosraError extends Error {
   readonly code: PhosraErrorCode
-  readonly status: number | undefined
-  readonly capability: string | undefined
-  readonly verdict: Verdict | undefined
+  readonly status?: number
+  readonly capability?: string
+  readonly verdict?: Verdict
   readonly retryable: boolean
-  readonly requestId: string | undefined
-  override readonly cause: unknown
+  readonly requestId?: string
+  override readonly cause?: unknown
 
   constructor(args: {
     code: PhosraErrorCode
     message: string
-    status?: number
-    capability?: string
-    verdict?: Verdict
-    retryable?: boolean
-    requestId?: string
+    status?: number | undefined
+    capability?: string | undefined
+    verdict?: Verdict | undefined
+    retryable?: boolean | undefined
+    requestId?: string | undefined
     cause?: unknown
   }) {
     super(args.message)
     this.name = "PhosraError"
     this.code = args.code
-    this.status = args.status
-    this.capability = args.capability
-    this.verdict = args.verdict
+    if (args.status !== undefined) this.status = args.status
+    if (args.capability !== undefined) this.capability = args.capability
+    if (args.verdict !== undefined) this.verdict = args.verdict
     this.retryable = args.retryable ?? false
-    this.requestId = args.requestId
-    this.cause = args.cause
+    if (args.requestId !== undefined) this.requestId = args.requestId
+    if (args.cause !== undefined) this.cause = args.cause
   }
 }
 
@@ -93,7 +93,7 @@ export class PhosraClient {
   /** @internal */
   async _request<T>(
     path: string,
-    init: RequestInit & { body?: unknown; idempotencyKey?: string },
+    init: Omit<RequestInit, "body"> & { body?: unknown; idempotencyKey?: string },
   ): Promise<T> {
     const baseUrl = this.opts.baseUrl ?? DEFAULT_BASE_URL
     const url = baseUrl.replace(/\/$/, "") + path

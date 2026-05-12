@@ -21,10 +21,11 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@phosra/sdk": "workspace:*",
-    "@phosra/conformance": "workspace:*"
+    "@phosra/conformance": "workspace:*",
+    "@phosra/sdk": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "tsup": "^8.0.0",
     "typescript": "^5.5.0"
   },

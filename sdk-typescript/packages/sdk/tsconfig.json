@@ -3,9 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "paths": {
-      "@phosra/types": ["../types/src/index.ts"]
-    }
+    "exactOptionalPropertyTypes": false
   },
   "include": ["src/**/*"]
 }
