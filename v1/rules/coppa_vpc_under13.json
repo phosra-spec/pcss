@@ -5,12 +5,17 @@
   "statutes": [
     {
       "jurisdiction": "US",
-      "citation": "COPPA-§312.5",
+      "citation": "COPPA-\u00a7312.5",
       "url": "https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-312"
     }
   ],
   "summary": "Verifiable parental consent required before account creation or data collection from users under 13. Threshold envelope must carry vpc:true and a vpc_method.",
-  "applies_to_ages": ["0-5", "6-9", "10-12"],
+  "applies_to_ages": [
+    "0-5",
+    "6-9",
+    "10-12"
+  ],
   "default_outcome": "deny",
+  "enforcement_status": "in_force",
   "introduced_in": "v1.0"
 }

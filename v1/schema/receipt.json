@@ -2,9 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pcss.phosra-spec.org/v1/schema/receipt.json",
   "title": "PCSS Notary Receipt",
-  "description": "Regulator-ready signed enforcement receipt. Wraps a Verdict (§9) in a signed envelope for replay by a regulator or civil-society auditor. See PCSS §10.",
+  "description": "Regulator-ready signed enforcement receipt. Wraps a Verdict (\u00a79) in a signed envelope for replay by a regulator or civil-society auditor. See PCSS \u00a710.",
   "type": "object",
-  "required": ["receipt_id", "verdict", "bearing_id", "issued_at", "signature", "spec"],
+  "required": [
+    "receipt_id",
+    "verdict",
+    "bearing_id",
+    "issued_at",
+    "signature",
+    "spec"
+  ],
   "properties": {
     "receipt_id": {
       "type": "string",
@@ -32,20 +39,27 @@
       "type": "string",
       "description": "PCSS version under which this receipt was generated.",
       "pattern": "^PCSS-v[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[a-z0-9-]+)?$",
-      "examples": ["PCSS-v1.0"]
+      "examples": [
+        "PCSS-v1.0"
+      ]
     },
     "signature": {
       "type": "object",
-      "required": ["alg", "value", "key_id"],
+      "required": [
+        "alg",
+        "value",
+        "key_id"
+      ],
       "properties": {
         "alg": {
           "type": "string",
-          "enum": ["ed25519"]
+          "description": "Signature algorithm. v1.0 mandates 'ed25519'. v1.1 adds hybrid suites (e.g., 'ed25519+ml-dsa-65').",
+          "pattern": "^[a-z][a-z0-9+-]+$"
         },
         "value": {
           "type": "string",
-          "description": "Base64url-encoded signature over the canonical typed-data form of the receipt (EIP-712-style canonicalization).",
-          "pattern": "^[A-Za-z0-9_-]+$"
+          "description": "Base64url-encoded 64-byte ed25519 signature. Exactly 86 characters, no padding.",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
         },
         "key_id": {
           "type": "string",
@@ -54,8 +68,161 @@
         "timestamp_authority": {
           "type": "string",
           "description": "Optional RFC 3161 trusted timestamp authority identifier."
+        },
+        "alternate_signatures": {
+          "type": "array",
+          "description": "Optional parallel signatures for hybrid suites (e.g., post-quantum). Each MUST sign the same canonical envelope.",
+          "items": {
+            "type": "object",
+            "required": [
+              "alg",
+              "value",
+              "key_id"
+            ],
+            "properties": {
+              "alg": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9+-]+$"
+              },
+              "value": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "key_id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Per-signature implementer extensions. Keys MUST carry a vendor prefix (e.g., 'apple:'). Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "email"
+                ]
+              },
+              {
+                "required": [
+                  "phone"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "first_name"
+                ]
+              },
+              {
+                "required": [
+                  "last_name"
+                ]
+              },
+              {
+                "required": [
+                  "full_name"
+                ]
+              },
+              {
+                "required": [
+                  "device_id"
+                ]
+              },
+              {
+                "required": [
+                  "imei"
+                ]
+              },
+              {
+                "required": [
+                  "idfa"
+                ]
+              },
+              {
+                "required": [
+                  "gaid"
+                ]
+              },
+              {
+                "required": [
+                  "mac_address"
+                ]
+              },
+              {
+                "required": [
+                  "ssn"
+                ]
+              },
+              {
+                "required": [
+                  "dob"
+                ]
+              },
+              {
+                "required": [
+                  "birth_date"
+                ]
+              },
+              {
+                "required": [
+                  "birthdate"
+                ]
+              },
+              {
+                "required": [
+                  "birthday"
+                ]
+              },
+              {
+                "required": [
+                  "lat"
+                ]
+              },
+              {
+                "required": [
+                  "lon"
+                ]
+              },
+              {
+                "required": [
+                  "latitude"
+                ]
+              },
+              {
+                "required": [
+                  "longitude"
+                ]
+              },
+              {
+                "required": [
+                  "precise_geo"
+                ]
+              },
+              {
+                "required": [
+                  "ip"
+                ]
+              },
+              {
+                "required": [
+                  "ip_address"
+                ]
+              }
+            ]
+          }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "implementer": {
       "type": "string",
@@ -64,7 +231,134 @@
     },
     "extensions": {
       "type": "object",
-      "additionalProperties": true
+      "description": "Implementer-specific extensions. Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "phone"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "first_name"
+            ]
+          },
+          {
+            "required": [
+              "last_name"
+            ]
+          },
+          {
+            "required": [
+              "full_name"
+            ]
+          },
+          {
+            "required": [
+              "device_id"
+            ]
+          },
+          {
+            "required": [
+              "imei"
+            ]
+          },
+          {
+            "required": [
+              "idfa"
+            ]
+          },
+          {
+            "required": [
+              "gaid"
+            ]
+          },
+          {
+            "required": [
+              "mac_address"
+            ]
+          },
+          {
+            "required": [
+              "ssn"
+            ]
+          },
+          {
+            "required": [
+              "dob"
+            ]
+          },
+          {
+            "required": [
+              "birth_date"
+            ]
+          },
+          {
+            "required": [
+              "birthdate"
+            ]
+          },
+          {
+            "required": [
+              "birthday"
+            ]
+          },
+          {
+            "required": [
+              "lat"
+            ]
+          },
+          {
+            "required": [
+              "lon"
+            ]
+          },
+          {
+            "required": [
+              "latitude"
+            ]
+          },
+          {
+            "required": [
+              "longitude"
+            ]
+          },
+          {
+            "required": [
+              "precise_geo"
+            ]
+          },
+          {
+            "required": [
+              "ip"
+            ]
+          },
+          {
+            "required": [
+              "ip_address"
+            ]
+          }
+        ]
+      }
+    },
+    "prev_receipt_hash": {
+      "type": "string",
+      "description": "Optional SHA-256 hash of the previous receipt's canonical form, base64url. v1.1 will make this required per security.md OI-10 (append-only integrity).",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
     }
   },
   "additionalProperties": false

@@ -44,19 +44,28 @@ A canonical Receipt envelope:
 
 ## §10.2 Signing protocol
 
-### §10.2.1 Canonicalization
+### §10.2.1 Canonicalization (RFC 8785 JCS + PCSS domain prefix)
 
-The receipt body (everything except the `signature` block) is canonicalized via EIP-712-style typed-data canonicalization adapted for non-Ethereum contexts. The domain separator is:
+The receipt body (everything except the `signature` block) is canonicalized via **RFC 8785 JSON Canonicalization Scheme (JCS)**:
+
+- Object keys sorted lexicographically by UTF-16 code-unit value
+- Arrays preserve insertion order
+- Numbers serialized per ECMA-262 7.1.12.1 (no `NaN`, no `Infinity`, no `-0`, shortest unique decimal)
+- Strings UTF-8 encoded per JCS §3.2.2.2 with lowercase `\uXXXX` for control chars
+- No insignificant whitespace
+- `undefined` fields dropped
+
+The signing input prepends a fixed byte-literal **domain prefix** to prevent cross-protocol signature reuse:
 
 ```
-domain = {
-  name: "PCSS",
-  version: "1.0",
-  verifyingAuthority: "phosra-spec.org/registry"
-}
+signing_input  =  b"\x00PCSS-v1.0\x00"  ||  JCS(receipt_body)
 ```
 
-Fields are serialized in declared order matching the JSON Schema; nested objects are recursively canonicalized. The result is hashed with SHA-256, then signed with ed25519 over the hash.
+The leading NUL byte ensures the prefix is not parseable as JSON. The version string is bumped at every major version; v1.x releases reuse `PCSS-v1.0`.
+
+Ed25519 signs `signing_input` directly. **No separate SHA-256 pass** — ed25519 hashes internally.
+
+Test vectors for the canonical form of each envelope type ship at [`v1/conformance/fixtures/canonicalization-vectors/`](../conformance/) (forthcoming). An implementation is Tier-2 conformant only if its canonical output byte-matches the published vectors.
 
 ### §10.2.2 Algorithm
 

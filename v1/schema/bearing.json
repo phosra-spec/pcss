@@ -2,9 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pcss.phosra-spec.org/v1/schema/bearing.json",
   "title": "PCSS Bearing Envelope",
-  "description": "The canonical age signal — produced by a Bearing Provider (typically an OS, account-level service, or third-party verifier) and consumed by Lens, Threshold, Aegis, and other PCSS runtime capabilities. See PCSS §3.",
+  "description": "The canonical age signal \u2014 produced by a Bearing Provider (typically an OS, account-level service, or third-party verifier) and consumed by Lens, Threshold, Aegis, and other PCSS runtime capabilities. See PCSS \u00a73.",
   "type": "object",
-  "required": ["bearing_id", "age_band", "confidence", "issued_at", "issuer", "jurisdiction", "signature"],
+  "required": [
+    "bearing_id",
+    "age_band",
+    "confidence",
+    "issued_at",
+    "issuer",
+    "jurisdiction",
+    "signature"
+  ],
   "properties": {
     "bearing_id": {
       "type": "string",
@@ -13,12 +21,23 @@
     },
     "age_band": {
       "type": "string",
-      "enum": ["0-5", "6-9", "10-12", "13-15", "16-17", "adult"],
+      "enum": [
+        "0-5",
+        "6-9",
+        "10-12",
+        "13-15",
+        "16-17",
+        "adult"
+      ],
       "description": "Coarse age band. Exact ages MUST NOT be transmitted."
     },
     "confidence": {
       "type": "string",
-      "enum": ["attested", "inferred", "unverified"],
+      "enum": [
+        "attested",
+        "inferred",
+        "unverified"
+      ],
       "description": "How the age signal was established. 'attested' implies verifiable parental consent (VPC); 'inferred' implies behavioral or account signals; 'unverified' implies no positive establishment."
     },
     "issued_at": {
@@ -43,27 +62,334 @@
     },
     "signature": {
       "type": "object",
-      "required": ["alg", "value"],
+      "required": [
+        "alg",
+        "value",
+        "key_id"
+      ],
       "properties": {
         "alg": {
           "type": "string",
-          "enum": ["ed25519"]
+          "description": "Signature algorithm. v1.0 mandates 'ed25519'. v1.1 adds hybrid suites (e.g., 'ed25519+ml-dsa-65').",
+          "pattern": "^[a-z][a-z0-9+-]+$"
         },
         "value": {
           "type": "string",
-          "description": "Base64url-encoded signature over the canonical JSON form of the envelope (with the signature object excluded).",
-          "pattern": "^[A-Za-z0-9_-]+$"
+          "description": "Base64url-encoded 64-byte ed25519 signature. Exactly 86 characters, no padding.",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
         },
         "key_id": {
           "type": "string",
           "description": "Issuer's key identifier; resolves to a public key in the PCSS registry."
+        },
+        "alternate_signatures": {
+          "type": "array",
+          "description": "Optional parallel signatures for hybrid suites (e.g., post-quantum). Each MUST sign the same canonical envelope.",
+          "items": {
+            "type": "object",
+            "required": [
+              "alg",
+              "value",
+              "key_id"
+            ],
+            "properties": {
+              "alg": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9+-]+$"
+              },
+              "value": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "key_id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Per-signature implementer extensions. Keys MUST carry a vendor prefix (e.g., 'apple:'). Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "email"
+                ]
+              },
+              {
+                "required": [
+                  "phone"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "first_name"
+                ]
+              },
+              {
+                "required": [
+                  "last_name"
+                ]
+              },
+              {
+                "required": [
+                  "full_name"
+                ]
+              },
+              {
+                "required": [
+                  "device_id"
+                ]
+              },
+              {
+                "required": [
+                  "imei"
+                ]
+              },
+              {
+                "required": [
+                  "idfa"
+                ]
+              },
+              {
+                "required": [
+                  "gaid"
+                ]
+              },
+              {
+                "required": [
+                  "mac_address"
+                ]
+              },
+              {
+                "required": [
+                  "ssn"
+                ]
+              },
+              {
+                "required": [
+                  "dob"
+                ]
+              },
+              {
+                "required": [
+                  "birth_date"
+                ]
+              },
+              {
+                "required": [
+                  "birthdate"
+                ]
+              },
+              {
+                "required": [
+                  "birthday"
+                ]
+              },
+              {
+                "required": [
+                  "lat"
+                ]
+              },
+              {
+                "required": [
+                  "lon"
+                ]
+              },
+              {
+                "required": [
+                  "latitude"
+                ]
+              },
+              {
+                "required": [
+                  "longitude"
+                ]
+              },
+              {
+                "required": [
+                  "precise_geo"
+                ]
+              },
+              {
+                "required": [
+                  "ip"
+                ]
+              },
+              {
+                "required": [
+                  "ip_address"
+                ]
+              }
+            ]
+          }
         }
-      }
+      },
+      "additionalProperties": false
     },
     "extensions": {
       "type": "object",
-      "description": "Optional implementer-specific extensions. Keys MUST carry a vendor prefix (e.g., 'apple:').",
-      "additionalProperties": true
+      "description": "Optional implementer-specific extensions. Keys MUST carry a vendor prefix (e.g., 'apple:'). Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "phone"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "first_name"
+            ]
+          },
+          {
+            "required": [
+              "last_name"
+            ]
+          },
+          {
+            "required": [
+              "full_name"
+            ]
+          },
+          {
+            "required": [
+              "device_id"
+            ]
+          },
+          {
+            "required": [
+              "imei"
+            ]
+          },
+          {
+            "required": [
+              "idfa"
+            ]
+          },
+          {
+            "required": [
+              "gaid"
+            ]
+          },
+          {
+            "required": [
+              "mac_address"
+            ]
+          },
+          {
+            "required": [
+              "ssn"
+            ]
+          },
+          {
+            "required": [
+              "dob"
+            ]
+          },
+          {
+            "required": [
+              "birth_date"
+            ]
+          },
+          {
+            "required": [
+              "birthdate"
+            ]
+          },
+          {
+            "required": [
+              "birthday"
+            ]
+          },
+          {
+            "required": [
+              "lat"
+            ]
+          },
+          {
+            "required": [
+              "lon"
+            ]
+          },
+          {
+            "required": [
+              "latitude"
+            ]
+          },
+          {
+            "required": [
+              "longitude"
+            ]
+          },
+          {
+            "required": [
+              "precise_geo"
+            ]
+          },
+          {
+            "required": [
+              "ip"
+            ]
+          },
+          {
+            "required": [
+              "ip_address"
+            ]
+          }
+        ]
+      }
+    },
+    "device_attestation": {
+      "type": "object",
+      "description": "Optional device-attestation envelope. v1.1 will make this required for OS-level Bearing Providers per security.md OI-8.",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "enum": [
+            "apple-app-attest",
+            "android-play-integrity",
+            "windows-attestation",
+            "tpm-2.0"
+          ]
+        },
+        "token": {
+          "type": "string"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "pairwise_for": {
+      "type": "string",
+      "description": "Optional pairwise-pseudonym consumer audience. When present, the bearing_id is derived per-consumer (HKDF(root_bearing, consumer_id)). v1.1 will make this required per security.md OI-5.",
+      "pattern": "^[a-z]+:[a-z0-9-]+$"
     }
   },
   "additionalProperties": false

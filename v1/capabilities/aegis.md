@@ -60,7 +60,7 @@ Any gambling product (real-money wagering, casino-style mechanics including loot
 
 ### `aegis:dark-patterns`
 
-Statutory basis: FTC Act §5 (US), EU DSA Art. 25 (EU), CA-AADC §22675(a)(2) (CA).
+Statutory basis: FTC Act §5 (US), EU DSA Art. 25 (EU), CA-AADC §1798.99.31(a)(2) (CA).
 
 Hard blocks for: subscription dark patterns (auto-renew without disclosure), hidden cancellation flows requiring more steps than signup, manipulative urgency triggers (false "time-limited" prompts to minors), persuasive design patterns explicitly designed to override deliberate choice.
 
@@ -135,9 +135,9 @@ The civil-society-defined categories (e.g., `csm_nfk_hard_block`) follow the sam
 
 | Category | Primary statute |
 | --- | --- |
-| `aegis:csam` | 18 U.S.C. §2258A (US); EU DSA Art. 28 (EU); UK OSA Schedule 6 (UK) |
+| `aegis:csam` | 18 U.S.C. §2258A (US); Directive 2011/93/EU + proposed CSAR (EU); UK OSA Schedule 6 (UK) |
 | `aegis:gambling-minors` | UIGEA (US); national gambling licenses |
-| `aegis:dark-patterns` | FTC Act §5 (US); EU DSA Art. 25 (EU); CA-AADC §22675(a)(2) (CA) |
+| `aegis:dark-patterns` | FTC Act §5 (US); EU DSA Art. 25 (EU); CA-AADC §1798.99.31(a)(2) (CA) |
 | `aegis:age-inappropriate-monetization` | KOSA §4(b)(4) (US, pending); Belgium Gaming Commission 2018 |
 | `csm_nfk_hard_block` | Common Sense Media Privacy Program (civil-society) |
 | `ny_s9051_ai_companionship_block_minor` | NY S9051 §2 (US-NY) |

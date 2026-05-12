@@ -1,0 +1,41 @@
+# PCSS CODEOWNERS — required review routing.
+# Until WG chairs are seated (per ROADMAP H1.2, 2026-07-01), all paths
+# route to the founding maintainer. Empty team handles are public
+# commitments to be filled by the named WG.
+
+* @jakekklinvex
+
+# Per-capability ownership (placeholders for forthcoming WG chairs).
+/v1/capabilities/bearing.md     @jakekklinvex @phosra-spec/wg-bearing
+/v1/capabilities/lens.md        @jakekklinvex @phosra-spec/wg-lens-aegis
+/v1/capabilities/aegis.md       @jakekklinvex @phosra-spec/wg-lens-aegis
+/v1/capabilities/threshold.md   @jakekklinvex @phosra-spec/wg-threshold-custody
+/v1/capabilities/custody.md     @jakekklinvex @phosra-spec/wg-threshold-custody
+/v1/capabilities/herald.md      @jakekklinvex @phosra-spec/wg-verdict-herald
+/v1/capabilities/verdict.md     @jakekklinvex @phosra-spec/wg-verdict-herald
+/v1/capabilities/notary.md      @jakekklinvex @phosra-spec/wg-notary
+
+# Schemas live alongside the capability text and share owners.
+/v1/schema/bearing.json     @jakekklinvex @phosra-spec/wg-bearing
+/v1/schema/threshold.json   @jakekklinvex @phosra-spec/wg-threshold-custody
+/v1/schema/herald.json      @jakekklinvex @phosra-spec/wg-verdict-herald
+/v1/schema/custody.json     @jakekklinvex @phosra-spec/wg-threshold-custody
+/v1/schema/verdict.json     @jakekklinvex @phosra-spec/wg-verdict-herald
+/v1/schema/receipt.json     @jakekklinvex @phosra-spec/wg-notary
+/v1/schema/rule.json        @jakekklinvex @phosra-spec/wg-conformance
+
+# Cross-cutting docs.
+/v1/references.md           @jakekklinvex @phosra-spec/wg-regulatory
+/v1/security.md             @jakekklinvex @phosra-spec/wg-notary
+/v1/conformance/            @jakekklinvex @phosra-spec/wg-conformance
+/v1/rules/                  @jakekklinvex @phosra-spec/wg-regulatory
+
+# Governance.
+/GOVERNANCE.md              @jakekklinvex
+/CONTRIBUTING.md            @jakekklinvex
+/CODE_OF_CONDUCT.md         @jakekklinvex
+/ROADMAP.md                 @jakekklinvex
+
+# SDK + reference impl.
+/sdk-typescript/            @jakekklinvex
+/reference/                 @jakekklinvex

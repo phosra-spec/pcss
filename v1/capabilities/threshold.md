@@ -144,7 +144,7 @@ A Threshold envelope's lifecycle is bound to the underlying Bearing — when the
 | COPPA §312.5 | The entire VPC framework. `vpc: true` is semantically equivalent to a §312.5-compliant consent record. |
 | COPPA §312.6 | Parental access and revocation rights — the basis for our revocation propagation. |
 | GDPR Art. 8 | Parental authorization for users under 16 (member states may lower to 13). |
-| CA-AADC §22675(a)(7) | Per-scope toggle requirements — our canonical scope grammar maps directly. |
+| CA-AADC §1798.99.31(a)(7) | Per-scope toggle requirements — our canonical scope grammar maps directly. |
 | UK Age-Appropriate Design Code | The 15 standards including high-privacy defaults; our scope grammar must accommodate. |
 | EU DSA Art. 28 | Consent-gated targeted advertising to minors. |
 

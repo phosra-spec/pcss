@@ -10,7 +10,14 @@
     }
   ],
   "summary": "Targeted advertising based on profiling banned for users known to be minors. Applies regardless of age signal confidence.",
-  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "applies_to_ages": [
+    "0-5",
+    "6-9",
+    "10-12",
+    "13-15",
+    "16-17"
+  ],
   "default_outcome": "deny",
+  "enforcement_status": "in_force",
   "introduced_in": "v1.0"
 }

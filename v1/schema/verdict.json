@@ -2,9 +2,16 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pcss.phosra-spec.org/v1/schema/verdict.json",
   "title": "PCSS Verdict Envelope",
-  "description": "The output of a Lens evaluation, Threshold consent check, or Aegis block. Every verdict is signed by Notary (§10) for replay. See PCSS §9.",
+  "description": "The output of a Lens evaluation, Threshold consent check, or Aegis block. Every verdict is signed by Notary (\u00a710) for replay. See PCSS \u00a79.",
   "type": "object",
-  "required": ["verdict_id", "allow", "reason", "cited", "bearing_id", "evaluated_at"],
+  "required": [
+    "verdict_id",
+    "allow",
+    "reason",
+    "cited",
+    "bearing_id",
+    "evaluated_at"
+  ],
   "properties": {
     "verdict_id": {
       "type": "string",
@@ -25,7 +32,11 @@
       "description": "Statute or treaty citations that justify this verdict.",
       "items": {
         "type": "string",
-        "examples": ["KOSA-§4(b)(2)", "CA-AADC-§22675(a)(2)", "COPPA-§312.5"]
+        "examples": [
+          "KOSA-\u00a74(b)(2)",
+          "CA-AADC-\u00a722675(a)(2)",
+          "COPPA-\u00a7312.5"
+        ]
       },
       "minItems": 1
     },
@@ -50,12 +61,21 @@
     },
     "capability": {
       "type": "string",
-      "enum": ["bearing", "lens", "threshold", "aegis", "herald", "custody", "verdict", "notary"],
+      "enum": [
+        "bearing",
+        "lens",
+        "threshold",
+        "aegis",
+        "herald",
+        "custody",
+        "verdict",
+        "notary"
+      ],
       "description": "The runtime capability that produced this verdict."
     },
     "jurisdictions": {
       "type": "array",
-      "description": "All jurisdictions cited in the verdict. If multiple, the stricter rule was applied per §4.3.",
+      "description": "All jurisdictions cited in the verdict. If multiple, the stricter rule was applied per \u00a74.3.",
       "items": {
         "type": "string",
         "pattern": "^[A-Z]{2}(-[A-Z]{2,3})?$"
@@ -64,7 +84,139 @@
     },
     "extensions": {
       "type": "object",
-      "additionalProperties": true
+      "description": "Implementer-specific extensions. Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "phone"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "first_name"
+            ]
+          },
+          {
+            "required": [
+              "last_name"
+            ]
+          },
+          {
+            "required": [
+              "full_name"
+            ]
+          },
+          {
+            "required": [
+              "device_id"
+            ]
+          },
+          {
+            "required": [
+              "imei"
+            ]
+          },
+          {
+            "required": [
+              "idfa"
+            ]
+          },
+          {
+            "required": [
+              "gaid"
+            ]
+          },
+          {
+            "required": [
+              "mac_address"
+            ]
+          },
+          {
+            "required": [
+              "ssn"
+            ]
+          },
+          {
+            "required": [
+              "dob"
+            ]
+          },
+          {
+            "required": [
+              "birth_date"
+            ]
+          },
+          {
+            "required": [
+              "birthdate"
+            ]
+          },
+          {
+            "required": [
+              "birthday"
+            ]
+          },
+          {
+            "required": [
+              "lat"
+            ]
+          },
+          {
+            "required": [
+              "lon"
+            ]
+          },
+          {
+            "required": [
+              "latitude"
+            ]
+          },
+          {
+            "required": [
+              "longitude"
+            ]
+          },
+          {
+            "required": [
+              "precise_geo"
+            ]
+          },
+          {
+            "required": [
+              "ip"
+            ]
+          },
+          {
+            "required": [
+              "ip_address"
+            ]
+          }
+        ]
+      }
+    },
+    "nonce": {
+      "type": "string",
+      "description": "Optional verdict nonce bound to the surface request. v1.1 will make this required per security.md OI-2 (replay defense).",
+      "pattern": "^[A-Za-z0-9_-]{16,128}$"
+    },
+    "registry_version": {
+      "type": "string",
+      "description": "Rule registry version this evaluation was performed against. v1.1 will make this required for Notary replay determinism per \u00a74.3.6.",
+      "pattern": "^v[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[a-z0-9-]+)?$"
     }
   },
   "additionalProperties": false

@@ -5,12 +5,21 @@
   "statutes": [
     {
       "jurisdiction": "US-CA",
-      "citation": "CA-AB-1043-§3",
+      "citation": "CA-AB-1043-\u00a73",
       "url": "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB1043"
     }
   ],
   "summary": "Platforms must accept and honor OS-level age signals from Apple, Google, Samsung, and Microsoft. Effective 2027-01-01.",
-  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "applies_to_ages": [
+    "0-5",
+    "6-9",
+    "10-12",
+    "13-15",
+    "16-17"
+  ],
   "default_outcome": "warn",
+  "enforcement_status": "in_force_phased",
+  "advisory": true,
+  "applicable_from": "2027-01-01",
   "introduced_in": "v1.0"
 }

@@ -1,0 +1,99 @@
+name: Validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install ajv-cli + redocly
+        run: |
+          npm install -g ajv-cli@5 ajv-formats@3 @redocly/cli@1
+      - name: Validate every JSON Schema is self-consistent
+        run: |
+          set -e
+          for f in v1/schema/*.json; do
+            echo "::group::Schema self-validate $f"
+            ajv compile -s "$f" --strict=false
+            echo "::endgroup::"
+          done
+      - name: Validate every rule against rule.json
+        run: |
+          set -e
+          for f in v1/rules/*.json; do
+            echo "::group::Rule $f"
+            ajv validate -s v1/schema/rule.json -d "$f" --strict=false -c ajv-formats
+            echo "::endgroup::"
+          done
+      - name: Validate Bearing fixtures against bearing.json
+        run: |
+          set -e
+          for f in v1/conformance/fixtures/bearings/*.json; do
+            echo "::group::Bearing fixture $f"
+            ajv validate -s v1/schema/bearing.json -d "$f" --strict=false -c ajv-formats
+            echo "::endgroup::"
+          done
+      - name: Conformance rule: enforcement_status=proposed requires advisory=true
+        run: |
+          set -e
+          for f in v1/rules/*.json; do
+            python3 -c "
+          import json, sys
+          d = json.load(open('$f'))
+          if d.get('enforcement_status') == 'proposed' and not d.get('advisory'):
+            print(f'CONFORMANCE FAIL: {sys.argv[1]} is proposed but advisory!=true', file=sys.stderr); sys.exit(1)
+          " "$f"
+          done
+
+  openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g @redocly/cli@1
+      - name: Lint OpenAPI surface
+        run: redocly lint v1/openapi.yaml --extends recommended
+
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Link-check markdown
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --exclude-loopback --exclude 'phosra-api.fly.dev' --exclude 'localhost' '**/*.md'
+          fail: true
+
+  rfc-template:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require RFC PRs to use template
+        run: |
+          set -e
+          # If any rfcs/NNNN-*.md was added in this PR, check it has the template sections
+          changed=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- 'rfcs/*.md' | grep -v 'rfcs/0000-template.md\|rfcs/README.md' || true)
+          if [ -n "$changed" ]; then
+            for f in $changed; do
+              echo "Checking RFC sections in $f"
+              for section in "## Summary" "## Motivation" "## Detailed design" "## Drawbacks" "## Rationale and alternatives"; do
+                if ! grep -qF "$section" "$f"; then
+                  echo "::error file=$f::Missing required section: $section"
+                  exit 1
+                fi
+              done
+            done
+          fi

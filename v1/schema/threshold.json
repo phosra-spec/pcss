@@ -2,9 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://pcss.phosra-spec.org/v1/schema/threshold.json",
   "title": "PCSS Threshold Envelope",
-  "description": "Verifiable parental consent and access-boundary grants. Issued by the parent (typically via a parental-control app or OS Family flow) and consumed by Lens, Aegis, and downstream platforms. See PCSS §5.",
+  "description": "Verifiable parental consent and access-boundary grants. Issued by the parent (typically via a parental-control app or OS Family flow) and consumed by Lens, Aegis, and downstream platforms. See PCSS \u00a75.",
   "type": "object",
-  "required": ["consent_id", "bearing_id", "granted_scope", "issued_at", "issuer", "jurisdiction", "signature"],
+  "required": [
+    "consent_id",
+    "bearing_id",
+    "granted_scope",
+    "issued_at",
+    "issuer",
+    "jurisdiction",
+    "signature"
+  ],
   "properties": {
     "consent_id": {
       "type": "string",
@@ -27,7 +35,7 @@
     },
     "vpc": {
       "type": "boolean",
-      "description": "True if this consent satisfies COPPA §312.5 verifiable parental consent (VPC) requirements. SHOULD be true for consents issued to users with age_band 0-5, 6-9, or 10-12 in US jurisdictions.",
+      "description": "True if this consent satisfies COPPA \u00a7312.5 verifiable parental consent (VPC) requirements. SHOULD be true for consents issued to users with age_band 0-5, 6-9, or 10-12 in US jurisdictions.",
       "default": false
     },
     "vpc_method": {
@@ -56,7 +64,7 @@
     "revoked_at": {
       "type": "string",
       "format": "date-time",
-      "description": "If present, the timestamp at which the parent revoked this consent. Revocation MUST propagate to all downstream consumers within the §5.3 freshness window (7 days for VPC; 30 days otherwise)."
+      "description": "If present, the timestamp at which the parent revoked this consent. Revocation MUST propagate to all downstream consumers within the \u00a75.3 freshness window (7 days for VPC; 30 days otherwise)."
     },
     "issuer": {
       "type": "string",
@@ -70,28 +78,306 @@
     },
     "signature": {
       "type": "object",
-      "required": ["alg", "value", "key_id"],
+      "required": [
+        "alg",
+        "value",
+        "key_id"
+      ],
       "properties": {
         "alg": {
           "type": "string",
-          "enum": ["ed25519"]
+          "description": "Signature algorithm. v1.0 mandates 'ed25519'. v1.1 adds hybrid suites (e.g., 'ed25519+ml-dsa-65').",
+          "pattern": "^[a-z][a-z0-9+-]+$"
         },
         "value": {
           "type": "string",
-          "description": "Base64url-encoded signature over the canonical envelope (signature object excluded). MUST be produced by the issuer's registered key.",
-          "pattern": "^[A-Za-z0-9_-]+$"
+          "description": "Base64url-encoded 64-byte ed25519 signature. Exactly 86 characters, no padding.",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
         },
         "key_id": {
           "type": "string",
           "description": "Issuer's key identifier; resolves to a public key in the PCSS registry."
+        },
+        "alternate_signatures": {
+          "type": "array",
+          "description": "Optional parallel signatures for hybrid suites (e.g., post-quantum). Each MUST sign the same canonical envelope.",
+          "items": {
+            "type": "object",
+            "required": [
+              "alg",
+              "value",
+              "key_id"
+            ],
+            "properties": {
+              "alg": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9+-]+$"
+              },
+              "value": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "key_id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Per-signature implementer extensions. Keys MUST carry a vendor prefix (e.g., 'apple:'). Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "email"
+                ]
+              },
+              {
+                "required": [
+                  "phone"
+                ]
+              },
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "first_name"
+                ]
+              },
+              {
+                "required": [
+                  "last_name"
+                ]
+              },
+              {
+                "required": [
+                  "full_name"
+                ]
+              },
+              {
+                "required": [
+                  "device_id"
+                ]
+              },
+              {
+                "required": [
+                  "imei"
+                ]
+              },
+              {
+                "required": [
+                  "idfa"
+                ]
+              },
+              {
+                "required": [
+                  "gaid"
+                ]
+              },
+              {
+                "required": [
+                  "mac_address"
+                ]
+              },
+              {
+                "required": [
+                  "ssn"
+                ]
+              },
+              {
+                "required": [
+                  "dob"
+                ]
+              },
+              {
+                "required": [
+                  "birth_date"
+                ]
+              },
+              {
+                "required": [
+                  "birthdate"
+                ]
+              },
+              {
+                "required": [
+                  "birthday"
+                ]
+              },
+              {
+                "required": [
+                  "lat"
+                ]
+              },
+              {
+                "required": [
+                  "lon"
+                ]
+              },
+              {
+                "required": [
+                  "latitude"
+                ]
+              },
+              {
+                "required": [
+                  "longitude"
+                ]
+              },
+              {
+                "required": [
+                  "precise_geo"
+                ]
+              },
+              {
+                "required": [
+                  "ip"
+                ]
+              },
+              {
+                "required": [
+                  "ip_address"
+                ]
+              }
+            ]
+          }
         }
       },
       "additionalProperties": false
     },
     "extensions": {
       "type": "object",
-      "description": "Optional implementer-specific extensions. Keys MUST carry a vendor prefix.",
-      "additionalProperties": true
+      "description": "Optional implementer-specific extensions. Keys MUST carry a vendor prefix. Keys MUST carry a vendor prefix; PII fields are forbidden regardless of prefix.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*:[a-z0-9_-]+$"
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "email"
+            ]
+          },
+          {
+            "required": [
+              "phone"
+            ]
+          },
+          {
+            "required": [
+              "name"
+            ]
+          },
+          {
+            "required": [
+              "first_name"
+            ]
+          },
+          {
+            "required": [
+              "last_name"
+            ]
+          },
+          {
+            "required": [
+              "full_name"
+            ]
+          },
+          {
+            "required": [
+              "device_id"
+            ]
+          },
+          {
+            "required": [
+              "imei"
+            ]
+          },
+          {
+            "required": [
+              "idfa"
+            ]
+          },
+          {
+            "required": [
+              "gaid"
+            ]
+          },
+          {
+            "required": [
+              "mac_address"
+            ]
+          },
+          {
+            "required": [
+              "ssn"
+            ]
+          },
+          {
+            "required": [
+              "dob"
+            ]
+          },
+          {
+            "required": [
+              "birth_date"
+            ]
+          },
+          {
+            "required": [
+              "birthdate"
+            ]
+          },
+          {
+            "required": [
+              "birthday"
+            ]
+          },
+          {
+            "required": [
+              "lat"
+            ]
+          },
+          {
+            "required": [
+              "lon"
+            ]
+          },
+          {
+            "required": [
+              "latitude"
+            ]
+          },
+          {
+            "required": [
+              "longitude"
+            ]
+          },
+          {
+            "required": [
+              "precise_geo"
+            ]
+          },
+          {
+            "required": [
+              "ip"
+            ]
+          },
+          {
+            "required": [
+              "ip_address"
+            ]
+          }
+        ]
+      }
     }
   },
   "additionalProperties": false

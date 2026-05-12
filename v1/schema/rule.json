@@ -4,7 +4,7 @@
   "title": "PCSS Rule Registry Entry",
   "description": "A single rule in the PCSS rule registry. Each rule maps a statutory requirement to a PCSS capability. The registry as a whole is the cross-jurisdictional rulebook.",
   "type": "object",
-  "required": ["slug", "capability", "category", "statutes", "summary"],
+  "required": ["slug", "capability", "category", "statutes", "summary", "enforcement_status"],
   "properties": {
     "slug": {
       "type": "string",
@@ -52,6 +52,31 @@
       "type": "string",
       "enum": ["allow", "deny", "warn"],
       "description": "Default outcome when rule is triggered. Most enforcement rules default to 'deny'."
+    },
+    "enforcement_status": {
+      "type": "string",
+      "enum": ["in_force", "in_force_phased", "in_force_partial_injunction", "proposed", "enjoined", "superseded", "repealed"],
+      "description": "Whether the underlying statute is currently enforceable. Rules with status != 'in_force' should be advisory; conformance runners MUST surface non-in_force rules as informational and MUST NOT count them as required for badge eligibility unless explicitly opted in by the implementer."
+    },
+    "advisory": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, the rule produces guidance rather than enforcement. MUST be true for `proposed` status; SHOULD be true for `enjoined` or `phased` rules whose effective date is more than 90 days in the future."
+    },
+    "applicable_from": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date when the underlying statute takes effect. Used for `in_force_phased` rules (e.g., CA AB 1043 effective 2027-01-01)."
+    },
+    "applicable_until": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date when the underlying statute ceased to apply (`repealed` or `superseded`)."
+    },
+    "superseded_by": {
+      "type": "array",
+      "description": "If this rule has been superseded, slugs of replacement rules.",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
     },
     "introduced_in": {
       "type": "string",

@@ -10,7 +10,14 @@
     }
   ],
   "summary": "Products carrying a Common Sense Media Not For Kids (NFK) flag are hard-blocked for users with age_band below adult. Bypasses Lens conflict resolution.",
-  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "applies_to_ages": [
+    "0-5",
+    "6-9",
+    "10-12",
+    "13-15",
+    "16-17"
+  ],
   "default_outcome": "deny",
+  "enforcement_status": "in_force",
   "introduced_in": "v1.0"
 }

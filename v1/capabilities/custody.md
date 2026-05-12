@@ -75,7 +75,7 @@ Statutory overrides (longer retention permitted with citation in `statutory_basi
 | `18 U.S.C. §2258A` | 90 days minimum from notification | NCMEC CSAM evidence preservation |
 | `26 U.S.C. §6001` | 7 years | Tax-records retention for spend events |
 | `KOSA §6` | 7 years | Transparency audit records |
-| `EU DSA Art. 14` | 6 months from event | Transparency database evidence |
+| `EU DSA Art. 24(5)` | 6 months from event | Transparency database evidence |
 | `state breach-notification laws` | Variable | Per state — Illinois PIPA, Connecticut, etc. |
 
 Worked example: a minor turns 18. Their Threshold envelopes auto-expire (§5). Their Verdict receipts retain their declared retention (typically 180 days post-evaluation). Their Aegis-CSAM receipts (if any) retain at 90-day NCMEC preservation. The implementer's `retention_until` for each category honors the longest applicable rule.

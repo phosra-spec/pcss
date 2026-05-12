@@ -28,7 +28,7 @@ Lens response (Verdict, per §9):
   "verdict_id": "vrd_01HXYZ9Q4L9NPRS5WXT3ZUCDEF",
   "allow": false,
   "reason": "lens:recommender_off_minor",
-  "cited": ["KOSA-§4(b)(2)", "CA-AADC-§22675(a)(3)"],
+  "cited": ["KOSA-§4(b)(2)", "CA-AADC §1798.99.31(a)(3)"],
   "bearing_id": "brng_01HXYZ7P3K8MNQR4VWS2YTBCDE",
   "evaluated_at": "2026-05-11T18:00:00Z",
   "explanation": "Recommender feeds are disabled for users in age band 10-12 under California AADC and KOSA. Chronological feed available.",
@@ -72,7 +72,7 @@ A surface is *where* the action happens; `capability` is *what* the user is tryi
 | `data-collection` | Logging, analytics, profile enrichment |
 | `notification` | Initiating an out-of-band message to the user |
 
-A single surface may host multiple capabilities. A platform's "feed-rank" surface evaluated with `capability: recommender` triggers KOSA §4(b)(2); the same surface evaluated with `capability: data-collection` triggers different rules (CA-AADC §22675(a)(8)).
+A single surface may host multiple capabilities. A platform's "feed-rank" surface evaluated with `capability: recommender` triggers KOSA §4(b)(2); the same surface evaluated with `capability: data-collection` triggers different rules (CA-AADC §1798.99.31(a)(8)).
 
 ## §4.4 Evaluation algorithm
 
@@ -147,7 +147,7 @@ The Lens-capability rules in [`v1/rules/`](../rules/) cite their statutes inline
 
 | Rule | Statute |
 | --- | --- |
-| `kosa_recommender_off_minor` | KOSA §4(b)(2), CA-AADC §22675(a)(3) |
+| `kosa_recommender_off_minor` | KOSA §4(b)(2), CA-AADC §1798.99.31(a)(3) |
 | `kosa_addictive_design_off_minor` | KOSA §4(b)(1) |
 | `coppa2_targeted_ad_ban_under17` | COPPA 2.0 §1303(b) |
 | `eu_dsa_minor_targeted_ad_ban` | EU DSA Art. 28(2) |

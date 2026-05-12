@@ -5,12 +5,20 @@
   "statutes": [
     {
       "jurisdiction": "US-CA",
-      "citation": "CA-AADC-§22675(a)(2)",
+      "citation": "CA-AADC-\u00a722675(a)(2)",
       "url": "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202120220AB2273"
     }
   ],
   "summary": "Highest privacy defaults applied for any user the platform knows or should know is under 18. Geolocation off, profiling off, no dark patterns.",
-  "applies_to_ages": ["0-5", "6-9", "10-12", "13-15", "16-17"],
+  "applies_to_ages": [
+    "0-5",
+    "6-9",
+    "10-12",
+    "13-15",
+    "16-17"
+  ],
   "default_outcome": "deny",
+  "enforcement_status": "in_force_partial_injunction",
+  "advisory": true,
   "introduced_in": "v1.0"
 }

@@ -186,7 +186,7 @@ When two rules produce identical outcomes (same verdict, same scope) under diffe
 
 #### §4.3.3 Orthogonal-axis conflicts
 
-Some rules disagree on axes that are not directly comparable. For example, CA-AADC §22675(a)(7) requires opt-in for behavioral advertising; EU DSA Art. 28 requires algorithmic *transparency* (an explainability disclosure). One is a consent mechanism, the other a disclosure mechanism. Neither is stricter on the other's axis.
+Some rules disagree on axes that are not directly comparable. For example, CA-AADC §1798.99.31(a)(7) requires opt-in for behavioral advertising; EU DSA Art. 28 requires algorithmic *transparency* (an explainability disclosure). One is a consent mechanism, the other a disclosure mechanism. Neither is stricter on the other's axis.
 
 In this case the implementer **MUST** apply both rules independently — opt-in *and* disclosure — and emit a single Verdict carrying both citations. The Verdict's `allow` field reflects the *combined* outcome: if either rule would deny under its axis, the combined Verdict denies.
 
@@ -217,7 +217,7 @@ Combined outcome: `deny` (both US rules deny). Verdict:
 {
   "allow": false,
   "reason": "lens:recommender_off_minor",
-  "cited": ["us_kosa§4(b)(2)", "us_ca_aadc§22675(a)(3)"],
+  "cited": ["us_kosa§4(b)(2)", "us_ca_aadc§1798.99.31(a)(3)"],
   "jurisdictions": ["US", "US-CA"]
 }
 ```
@@ -395,10 +395,32 @@ See [`v1/schema/receipt.json`](schema/receipt.json). A Receipt envelope **MUST**
 - `bearing_id`: reference to the underlying Bearing.
 - `issued_at`: ISO 8601 timestamp.
 - `expires_at`: receipt validity window.
-- `signature`: ed25519 signature using EIP-712-style typed-data canonicalization.
-- `signer`: the Notary's registered key identifier.
+- `signature`: ed25519 signature over the canonicalized envelope (see §10.2.1).
+- `signature.key_id`: the Notary's registered key identifier.
 
-### §10.2 Replay and verification
+### §10.2 Canonicalization and signing
+
+#### §10.2.1 Canonicalization
+
+PCSS envelopes are canonicalized via **RFC 8785 JSON Canonicalization Scheme (JCS)** before signing. JCS produces a deterministic byte sequence for any JSON value: object keys sorted lexicographically by code-unit value; arrays preserve order; strings UTF-8 encoded with the JCS escape table; numbers serialized per ECMA-262 7.1.12.1; no insignificant whitespace; no `NaN` or `±Infinity`.
+
+The `signature` field itself is **excluded** from canonicalization; everything else in the envelope is signed. Two implementations that produce JSON-equivalent envelopes MUST produce byte-equal canonical forms.
+
+#### §10.2.2 Domain separator and signing input
+
+To prevent cross-protocol signature reuse, the signing input is constructed by prepending a fixed byte-literal domain prefix to the JCS output:
+
+```
+signing_input  =  b"\x00PCSS-v1.0\x00"  ||  JCS(envelope_without_signature)
+```
+
+The leading NUL byte ensures the prefix is not parseable as JSON. The version string is bumped at every major version (v2.0 will use `b"\x00PCSS-v2.0\x00"`); minor and patch versions reuse v1.0's prefix to preserve signature compatibility within a major.
+
+Ed25519 signs `signing_input` directly — ed25519 hashes internally; **no separate SHA-256 pass is added**.
+
+Test vectors for the canonical form of each envelope type are published at [`v1/conformance/fixtures/canonicalization-vectors/`](conformance/fixtures/) and an implementation is considered Tier-2 conformant only if its canonical output matches the published byte sequences.
+
+#### §10.2.3 Replay and verification
 
 A regulator or civil-society body **MUST** be able to:
 
