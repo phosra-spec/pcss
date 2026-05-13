@@ -1,0 +1,61 @@
+name: Stainless regen + conformance gate
+
+# Runs after Stainless opens a PR with a regenerated SDK on a
+# downstream repo. Configure the Stainless GitHub App in each
+# generated repo to call this workflow via repository_dispatch
+# OR call the conformance suite locally on every spec change.
+#
+# Until the downstream repos exist (Stainless studio creates them),
+# this workflow is scaffolded but inactive — uncomment the
+# repository_dispatch trigger and configure the secret once your
+# Stainless config + targets are live.
+
+on:
+  pull_request:
+    paths:
+      - 'v1/openapi.yaml'
+      - 'v1/schema/**'
+      - 'openapi.stainless.yml'
+  # repository_dispatch:
+  #   types: [stainless-regen]
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    name: Spec change must not break conformance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install + build the hand-written conformance runner
+        run: |
+          cd sdk-typescript
+          pnpm install --frozen-lockfile=false
+          pnpm -F @phosra/types build
+          pnpm -F @phosra/sdk build
+          pnpm -F @phosra/conformance build
+
+      - name: Spin up the reference server
+        run: |
+          cd reference/server
+          pnpm install --frozen-lockfile=false
+          pnpm start &
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://localhost:7474/ >/dev/null; then break; fi
+            sleep 2
+          done
+
+      - name: Run conformance against the reference
+        run: |
+          cd sdk-typescript
+          node packages/conformance/dist/cli.cjs \
+            --endpoint=http://localhost:7474/v1 \
+            --tier=0 \
+            --implementer=reference:pcss-dev

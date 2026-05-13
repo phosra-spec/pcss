@@ -1,0 +1,140 @@
+# Stainless config for the PCSS reference SDKs.
+# https://www.stainless.com/docs
+#
+# The source of truth for wire shape is v1/openapi.yaml. This file is
+# the SDK-ergonomics overlay only: namespace mapping, model naming,
+# per-language targets. Never re-encode wire semantics here.
+#
+# The hand-written conformance runner (@phosra/conformance), CLI
+# (@phosra/cli), and reference server (reference/server/) are NOT
+# generated and stay in source.
+
+organization:
+  name: phosra
+  docs: https://github.com/phosra-spec/pcss
+  contact: partners@phosra.com
+
+# ── Shared models ────────────────────────────────────────────────────────
+# Promote the seven envelope schemas to first-class typed models so
+# every generator emits matching names.
+resources:
+  $shared:
+    models:
+      Bearing: '#/components/schemas/Bearing'
+      Verdict: '#/components/schemas/Verdict'
+      Receipt: '#/components/schemas/Receipt'
+      Rule:    '#/components/schemas/Rule'
+
+  # ── /bearing/identify ──────────────────────────────────────────────────
+  bearings:
+    models:
+      Bearing: '#/components/schemas/Bearing'
+    methods:
+      identify: post /bearing/identify
+
+  # ── /lens/evaluate ─────────────────────────────────────────────────────
+  lens:
+    methods:
+      evaluate: post /lens/evaluate
+
+  # ── /threshold/check ───────────────────────────────────────────────────
+  threshold:
+    methods:
+      check: post /threshold/check
+
+  # ── /aegis/check ───────────────────────────────────────────────────────
+  aegis:
+    methods:
+      check: post /aegis/check
+
+  # ── /notary/sign + /notary/verify ──────────────────────────────────────
+  notary:
+    models:
+      Receipt: '#/components/schemas/Receipt'
+    methods:
+      sign:   post /notary/sign
+      verify: post /notary/verify
+
+  # ── /registry/rules ────────────────────────────────────────────────────
+  registry:
+    models:
+      Rule: '#/components/schemas/Rule'
+    subresources:
+      rules:
+        methods:
+          list: get /registry/rules
+
+# ── Client settings ──────────────────────────────────────────────────────
+# Auth model: the PCSS spec is auth-agnostic per §1.2 (transport bindings).
+# Adopters wire their own auth; the reference Phosra endpoint uses Stytch
+# JWT bearer tokens. Stainless emits a flexible bearer option here.
+client_settings:
+  opts:
+    api_key:
+      type: string
+      auth:
+        security_scheme: BearerAuth
+        header:
+          name: Authorization
+          format: Bearer {value}
+      env: PHOSRA_API_KEY
+      read_env: true
+    base_url:
+      type: string
+      default: https://api.phosra.com/v1
+
+# ── Generator targets ────────────────────────────────────────────────────
+# Each named target produces a separate repo + package. Naming preserves
+# the existing @phosra/sdk identity on npm so adopters don't need to
+# refactor imports.
+targets:
+  node:
+    package_name: '@phosra/sdk'
+    production_repo: phosra-spec/pcss-sdk-node
+    publish:
+      npm:
+        registry: https://registry.npmjs.org
+
+  python:
+    package_name: phosra
+    production_repo: phosra-spec/pcss-sdk-python
+    publish:
+      pypi: {}
+
+  go:
+    package_name: github.com/phosra-spec/pcss-sdk-go
+    production_repo: phosra-spec/pcss-sdk-go
+
+  kotlin:
+    package_name: com.phosra.pcss
+    production_repo: phosra-spec/pcss-sdk-kotlin
+
+# ── Documentation / metadata ─────────────────────────────────────────────
+readme:
+  example_requests:
+    default:
+      type: code
+      endpoint: post /lens/evaluate
+    headline:
+      type: code
+      endpoint: post /lens/evaluate
+
+# ── Notes for maintainers ────────────────────────────────────────────────
+# 1. RFC 8785 JCS canonicalization + ed25519 signing live OUTSIDE
+#    generated code. Server-side helpers (canonicalize, notarySign,
+#    notaryVerify, lensEvaluate) stay in a hand-written `@phosra/server`
+#    package or a future `@phosra/canonical` package. Stainless's default
+#    `JSON.stringify` is not RFC 8785 — do not rely on it for signing.
+#
+# 2. The conformance runner (@phosra/conformance) and CLI (@phosra/cli)
+#    are NOT in this config — they're hand-written and consume the
+#    generated SDK as a dependency. Adding them as generator targets
+#    would replace working code with worse code.
+#
+# 3. The reference server at reference/server/ implements the OpenAPI
+#    surface but is NOT a Stainless target — Stainless generates clients.
+#
+# 4. Spec changes flow: edit v1/openapi.yaml → push → Stainless GitHub
+#    App opens PRs in the four downstream SDK repos. Acceptance gate:
+#    @phosra/conformance MUST pass against the regenerated TS SDK before
+#    publishing. See .github/workflows/stainless-conformance.yml.
